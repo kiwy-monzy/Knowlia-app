@@ -1,0 +1,45 @@
+# Tauri ignore file
+# This file tells Tauri which files to ignore during development and building
+
+# Dependencies
+node_modules/
+npm/
+yarn/
+pnpm/
+tauri-app/
+
+# Build outputs
+dist/
+build/
+target/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Database files (keep during development)
+# user.db/
+# *.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Test coverage
+coverage/
+
+# Environment files
+.env
+.env.local
+.env.*.local

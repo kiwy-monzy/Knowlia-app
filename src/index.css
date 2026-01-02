@@ -1,0 +1,220 @@
+@import "tailwindcss";
+@import "./theme.css";
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+  background: none;
+  overflow: hidden;
+  touch-action: pan-x pan-y;
+}
+
+/* Hide scrollbar for all elements */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+   -webkit-scrollbar: none;  /* Webkit browsers */
+   user-select: none;  /* Prevent text selection */
+  -webkit-user-select: none; /* Safari */
+   -moz-user-select: none;  /* Firefox */
+   -ms-user-select: none;  /* IE/Edge */
+}
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 262 83% 58%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.9% 10%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 262 83% 58%;
+
+    /* Sidebar tokens */
+    --sidebar-background: 220 15% 97%;
+    --sidebar-foreground: 220 15% 20%;
+    --sidebar-primary: 175 80% 35%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 175 70% 95%;
+    --sidebar-accent-foreground: 175 80% 25%;
+    --sidebar-border: 220 10% 90%;
+    --sidebar-ring: 175 80% 40%;
+
+    /* Chat specific tokens */
+    --chat-sidebar: 220 15% 97%;
+    --chat-sidebar-hover: 220 10% 94%;
+    --chat-message-own: 175 70% 94%;
+    --chat-message-other: 220 10% 96%;
+    --chat-online: 145 70% 45%;
+    --chat-offline: 220 10% 70%;
+    --chat-typing: 175 80% 40%;
+    --chat-unread: 0 85% 60%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 262 83% 58%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 262 83% 58%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 262 83% 58%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 262 83% 58%;
+
+
+    /* Sidebar tokens */
+    --sidebar-background: 225 20% 5%;
+    --sidebar-foreground: 210 15% 85%;
+    --sidebar-primary: 175 80% 50%;
+    --sidebar-primary-foreground: 225 20% 5%;
+    --sidebar-accent: 225 15% 12%;
+    --sidebar-accent-foreground: 175 80% 70%;
+    --sidebar-border: 225 15% 14%;
+    --sidebar-ring: 175 80% 50%;
+
+    /* Chat specific tokens */
+    --chat-sidebar: 225 20% 5%;
+    --chat-sidebar-hover: 225 15% 10%;
+    --chat-message-own: 175 60% 18%;
+    --chat-message-other: 225 15% 12%;
+    --chat-online: 145 70% 50%;
+    --chat-offline: 220 10% 40%;
+    --chat-typing: 175 80% 50%;
+    --chat-unread: 0 70% 55%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+  
+  /* Avatar layout specific styles */
+  .avatar-layout {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: transparent;
+  }
+
+  .avatar-layout #root {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Luckiest Guy font: supports both normal and bold via font-weight - sets only one @font-face with font-weight range */
+  @font-face {
+    font-family: 'luckiest-guy-regular';
+    src: url('/fonts/LuckiestGuy.ttf') format('truetype');
+    font-weight: 400 900;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  /* Sister Spray font: only regular (400) weight defined */
+  @font-face {
+    font-family: 'sister-spray';
+    src: url('/fonts/Sister Spray.ttf') format('truetype');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+  }
+
+  .font-luckiest-guy {
+    font-family: 'luckiest-guy-regular', cursive;
+  }
+  .font-sister-spray {
+    font-family: 'sister-spray', cursive;
+  }
+
+}
+
+/* Custom styles for group members */
+.group-member {
+  @apply flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors;
+}
+
+.avatar {
+  @apply w-10 h-10 rounded-full object-cover;
+}
+
+.online-badge {
+  @apply absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white;
+}
+
+.member-status {
+  @apply text-sm text-gray-500;
+}
+
+.member-status.online {
+  @apply text-green-600;
+}
+
+

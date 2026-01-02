@@ -1,0 +1,85 @@
+.writing-mode-vertical {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
+
+.iframe-full {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.time-indicator-line {
+  position: absolute;
+  left: 80px;
+  right: 0;
+  top: 0;
+  border-top: 2px solid #ff3b3b;
+  width: 100%;
+  z-index: 100;
+  box-shadow: 0 0 4px rgba(255, 59, 59, 0.3);
+}
+
+.time-indicator-label {
+  position: absolute;
+  left: 0;
+  width: 60px;
+  display: flex;
+  justify-content: center;
+  z-index: 101;
+  pointer-events: none;
+  top: -13px;
+}
+
+.time-indicator-label span {
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  background: #ff3b3b;
+  padding: 2px 2px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.time-indicator-dot {
+  border-top: 2px solid #ff3b3b;
+  width: 2px;
+  height: 16px;
+  margin: 0 auto;
+}
+
+.slot-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px solid #e5e7eb;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.half-slot-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #d1d5db;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.session-block {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  min-height: 20px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.empty-cell {
+  padding: 0;
+}

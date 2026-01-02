@@ -1,0 +1,663 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Administration Parking",
+        "building_name": "Administration Parking",
+        "floor_number": 0,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "Administration Parking",
+        "logo": "/src/assets/admin-logo.png",
+        "image": "/src/assets/admin-building.jpg",
+        "capacity": "",
+        "facilities": ["Parking"],
+        "hours": "24 Hours",
+        "contact": "+255 22 213 4567",
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239263,
+              -6.771628
+            ],
+            [
+              39.239324,
+              -6.771548
+            ],
+            [
+              39.239691,
+              -6.771833
+            ],
+            [
+              39.239628,
+              -6.771912
+            ],
+            [
+              39.239263,
+              -6.771628
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BLOCK A (Administration)",
+        "building_name": "BLOCK A (Administration)",
+        "floor_number": 1,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "BLOCK A (Administration)",
+        "logo": "/src/assets/admin-logo.png",
+        "image": "/src/assets/admin-building.jpg",
+        "capacity": "",
+        "facilities": ["Offices", "Meeting Rooms", "Reception Area"],
+        "hours": "6:00 AM - 11:00 PM",
+        "contact": "+255 22 213 4568",
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239382,
+              -6.771514
+            ],
+            [
+              39.239442,
+              -6.77144
+            ],
+            [
+              39.239778,
+              -6.771708
+            ],
+            [
+              39.239718,
+              -6.771781
+            ],
+            [
+              39.239382,
+              -6.771514
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "BLOCK B",
+        "building_name": "BLOCK B",
+        "floor_number": 3,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "BLOCK B",
+        "logo": "/src/assets/admin-logo.png",
+        "image": "/src/assets/admin-building.jpg",
+        "capacity": "",
+        "facilities": ["Offices", "Meeting Rooms", "Venues","Office Equipment", "Computer Lab", "Hubs"],
+        "hours": "8:00 AM - 5:00 PM",
+        "contact": "+255 22 213 4569",
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.23963,
+              -6.771486
+            ],
+            [
+              39.239831,
+              -6.771229
+            ],
+            [
+              39.239914,
+              -6.771294
+            ],
+            [
+              39.239836,
+              -6.771393
+            ],
+            [
+              39.23989,
+              -6.771435
+            ],
+            [
+              39.239963,
+              -6.771344
+            ],
+            [
+              39.240054,
+              -6.771416
+            ],
+            [
+              39.239857,
+              -6.771669
+            ],
+            [
+              39.239766,
+              -6.7716
+            ],
+            [
+              39.239846,
+              -6.771495
+            ],
+            [
+              39.239799,
+              -6.771458
+            ],
+            [
+              39.239722,
+              -6.771555
+            ],
+            [
+              39.23963,
+              -6.771486
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "BLOCK C",
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "BLOCK C",
+        "floor_number": 0,
+        "logo": "/src/assets/admin-logo.png",
+        "image": "/src/assets/admin-building.jpg",
+        "capacity": "",
+        "facilities": ["Offices", "Meeting Rooms", "Venues","Office Equipment", "Computer Lab", "Hubs"],
+        "hours": "8:00 AM - 5:00 PM",
+        "contact": "+255 22 213 4569",
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239911,
+              -6.771231
+            ],
+            [
+              39.239967,
+              -6.771158
+            ],
+            [
+              39.240424,
+              -6.771506
+            ],
+            [
+              39.240371,
+              -6.771578
+            ],
+            [
+              39.239911,
+              -6.771231
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "BLOCK D",
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "BLOCK D",
+        "floor_number": 0,
+        "logo": "/src/assets/admin-logo.png",
+        "image": "/src/assets/admin-building.jpg",
+        "capacity": "",
+        "facilities": ["Offices", "Meeting Rooms", "Venues","Office Equipment", "Computer Lab", "Hubs"],
+        "hours": "8:00 AM - 5:00 PM",
+        "contact": "+255 22 213 4569",
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239904,
+              -6.77123
+            ],
+            [
+              39.240317,
+              -6.770692
+            ],
+            [
+              39.240127,
+              -6.77053
+            ],
+            [
+              39.239703,
+              -6.771079
+            ],
+            [
+              39.239904,
+              -6.77123
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+          "building_name": "Vibweta Mabatini",
+          "floor_number": 0,
+          "location": "UDSM COICT, Kijitonyama",
+          "description": "Vibweta Mabatini",
+          "logo": "/src/assets/vibweta-logo.png",
+          "image": "/src/assets/vibweta-building.jpg",
+          "hours": "24 Hours",
+          "contact": "+255 22 213 4569",
+          "facilities": ["Study Area"],
+          "style": {
+            "stroke": "#1a1a1a",
+            "strokeWidth": 2,
+            "fillColor": "#fafafa",
+            "fillOpacity": 1
+          }
+        },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239686,
+              -6.770873
+            ],
+            [
+              39.239773,
+              -6.770937
+            ],
+            [
+              39.239612,
+              -6.771147
+            ],
+            [
+              39.239523,
+              -6.771079
+            ],
+            [
+              39.239686,
+              -6.770873
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239467,
+              -6.771149
+            ],
+            [
+              39.239522,
+              -6.771089
+            ],
+            [
+              39.239584,
+              -6.771148
+            ],
+            [
+              39.239531,
+              -6.771207
+            ],
+            [
+              39.239467,
+              -6.771149
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239479,
+              -6.771184
+            ],
+            [
+              39.239554,
+              -6.771243
+            ],
+            [
+              39.239488,
+              -6.771326
+            ],
+            [
+              39.239441,
+              -6.771288
+            ],
+            [
+              39.239465,
+              -6.771259
+            ],
+            [
+              39.239437,
+              -6.771237
+            ],
+            [
+              39.239479,
+              -6.771184
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.239376,
+              -6.771323
+            ],
+            [
+              39.239408,
+              -6.771286
+            ],
+            [
+              39.239477,
+              -6.771344
+            ],
+            [
+              39.239446,
+              -6.771381
+            ],
+            [
+              39.239376,
+              -6.771323
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "COICT Cafeteria",
+        "floor_number": 0,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "COICT Cafeteria",
+        "logo": "/src/assets/cafeteria-logo.png",
+        "image": "/src/assets/cafeteria-building.jpg",
+        "hours": "24 Hours",
+        "contact": "+255 22 213 4569",
+        "facilities": ["Cafeteria", "Food Court", "TV Room", "Sports Area","Drinks & Snacks","Money Changer"],
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.240641,
+              -6.771811
+            ],
+            [
+              39.240825,
+              -6.771956
+            ],
+            [
+              39.240978,
+              -6.771772
+            ],
+            [
+              39.240792,
+              -6.771622
+            ],
+            [
+              39.240641,
+              -6.771811
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "COICT Hostel",
+        "floor_number": 3,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "COICT Hostel",
+        "logo": "/src/assets/hostel-logo.png",
+        "image": "/src/assets/hostel-building.jpg",
+        "hours": "24 Hours",
+        "contact": "+255 22 213 4569",
+        "facilities": ["Hostel"],
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.240617,
+              -6.772471
+            ],
+            [
+              39.241032,
+              -6.771957
+            ],
+            [
+              39.241272,
+              -6.772151
+            ],
+            [
+              39.240852,
+              -6.772656
+            ],
+            [
+              39.240617,
+              -6.772471
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "COICT Stationary",
+        "floor_number": 0,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "COICT Stationary",
+        "logo": "/src/assets/stationary-logo.png",
+        "image": "/src/assets/stationary-building.jpg",
+        "hours": "24 Hours",
+        "contact": "+255 22 213 4569",
+        "facilities": ["Stationary"],
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.240449,
+              -6.770587
+            ],
+            [
+              39.240565,
+              -6.770467
+            ],
+            [
+              39.240679,
+              -6.77058
+            ],
+            [
+              39.240632,
+              -6.770623
+            ],
+            [
+              39.240579,
+              -6.770569
+            ],
+            [
+              39.240523,
+              -6.770627
+            ],
+            [
+              39.240494,
+              -6.7706
+            ],
+            [
+              39.240481,
+              -6.770616
+            ],
+            [
+              39.240449,
+              -6.770587
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "building_name": "COICT Security",
+        "floor_number": 0,
+        "location": "UDSM COICT, Kijitonyama",
+        "description": "COICT Security",
+        "logo": "/src/assets/security-logo.png",
+        "image": "/src/assets/security-building.jpg",
+        "hours": "24 Hours",
+        "contact": "+255 22 213 4569",
+        "facilities": ["Security Area"],
+        "style": {
+          "stroke": "#1a1a1a",
+          "strokeWidth": 2,
+          "fillColor": "#fafafa",
+          "fillOpacity": 1
+        }
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.240157,
+              -6.772427
+            ],
+            [
+              39.240103,
+              -6.772373
+            ],
+            [
+              39.240141,
+              -6.772335
+            ],
+            [
+              39.240195,
+              -6.772385
+            ],
+            [
+              39.240157,
+              -6.772427
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {},
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              39.240312,
+              -6.772231
+            ],
+            [
+              39.240375,
+              -6.772157
+            ],
+            [
+              39.24047,
+              -6.772242
+            ],
+            [
+              39.240407,
+              -6.772312
+            ],
+            [
+              39.240312,
+              -6.772231
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

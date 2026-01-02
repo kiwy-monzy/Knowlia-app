@@ -1,0 +1,17 @@
+/* FileOpeningModal animations and styles */
+@keyframes fileOpeningPulse {
+  0%, 100% {
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.file-opening-progress {
+  animation: fileOpeningPulse 1.5s ease-in-out infinite;
+}
+
+.file-opening-icon-ping {
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+}

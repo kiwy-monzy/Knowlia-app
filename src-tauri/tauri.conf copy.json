@@ -1,0 +1,100 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Knowlia",
+  "version": "1.1.2",
+  "identifier": "com.knowlia.app",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://127.0.0.1:9401",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist",
+    "removeUnusedCommands": true
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Knowlia",
+        "dragDropEnabled": true,
+        "center": true,
+        "minWidth": 1200,
+        "minHeight": 850,
+        "minimizable": true,
+        "transparent": true,
+        "shadow": false,
+        "focus": true,
+        "resizable": false,
+        "decorations": false,
+        "dataDirectory": "main_webview_data",
+        "preventOverflow": true,
+        "windowEffects": {
+          "effects": ["blur"],
+          "state": "active"
+        }
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "nsis",
+    "category": "Education",
+    "shortDescription": "Modern cross-platform education system for students and educators",
+    "longDescription": "Knowlia is a comprehensive education system designed for Mac, Windows, and Linux. It provides a modern, intuitive platform for managing educational content, tracking student progress, facilitating online learning, and enhancing the teaching experience. With features for course management, assignment tracking, interactive learning tools, and seamless communication between educators and students, Knowlia makes education accessible and efficient across all major operating systems.",
+    "resources": [
+      "./assets/gdrive_data.json",
+      "./assets/*",
+      "./assets/user.png",
+      "./assets/screenshot_examples/*",
+      "./assets/ocr/*",
+      "./assets/cer.pem",
+      "./assets/key.pem"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": "http://timestamp.digicert.com"
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.13",
+      "entitlements": null,
+      "exceptionDomain": ""
+    },
+    "linux": {
+      "deb": {
+        "depends": [],
+        "desktopTemplate": "knowlia.desktop"
+      },
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    },
+    "publisher": "Knowlia Education",
+    "copyright": "Copyright © 2024 Knowlia Education. All rights reserved.",
+    "homepage": "https://knowlia.education",
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://knowlia.site/app/latest.json",
+        "https://knowlia.site/update"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDQjcyRDY2MEU1M0QwOApSV1FJUGVWZzFuTExEUm4rK2V3eUNMLy9JU0JkQkxqQnBUVXdHbzdaM0w3THhaaTIyRERmeHFSNgo=",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

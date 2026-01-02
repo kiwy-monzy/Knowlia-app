@@ -1,0 +1,92 @@
+syntax = "proto3";
+package qaul.rpc.rtc;
+
+// RTC service RPC message container
+message RtcRpc {
+    // message type
+    oneof message {
+        // rtc session request
+        RtcSessionRequest rtc_session_request = 1;
+        // rtc session response for request
+        RtcSessionResponse rtc_session_response = 2;
+        // rtc session management
+        RtcSessionManagement rtc_session_management = 3;
+        // rtc outgoing
+        RtcOutgoing rtc_outgoing = 4;
+        // rtc incoming
+        RtcIncoming rtc_incoming = 5;
+        // rtc session list request
+        RtcSessionListRequest rtc_session_list_request = 6;
+        // rtc session list response
+        RtcSessionListResponse rtc_session_list_response = 7;
+    }
+}
+
+// rtc session request (caller initiates with SDP offer)
+message RtcSessionRequest {
+    // group id (peer id of the callee)
+    bytes group_id = 1;
+    // session type (1: audio, 2: video, 3: screen share)
+    uint32 session_type = 2;
+    // SDP offer from caller (JSON serialized str0m SdpOffer)
+    string sdp_offer = 3;
+}
+
+// rtc session response (includes SDP offer for callee to process)
+message RtcSessionResponse {
+    // group id
+    bytes group_id = 1;
+    // SDP offer received (callee needs this to generate answer)
+    string sdp_offer = 2;
+}
+
+// rtc session management (callee accepts/denies with SDP answer)
+message RtcSessionManagement {
+    // group id
+    bytes group_id = 1;
+    // option (1: accept with SDP answer, 2: deny, 3: end)
+    uint32 option = 2;
+    // SDP answer from callee (JSON serialized str0m SdpAnswer, only when option=1)
+    string sdp_answer = 3;
+}
+
+// rtc outgoing
+message RtcOutgoing {
+    // group id
+    bytes group_id = 1;
+    // content
+    bytes content = 2;
+}
+
+// rtc incoming
+message RtcIncoming {
+    // group id
+    bytes group_id = 1;
+    // content
+    bytes content = 2;
+}
+
+// rtc sessions
+message RtcSessionListRequest {}
+
+// rtc session
+message RtcSession {
+    // group id
+    bytes group_id = 1;
+    // session type
+    uint32 session_type = 2;
+    // stste
+    uint32 state = 3;
+    // created at
+    uint64 created_at = 4;
+    // SDP offer
+    string sdp_offer = 5;
+    // SDP answer
+    string sdp_answer = 6;
+}
+
+// rtc session list response
+message RtcSessionListResponse {
+    // session list
+    repeated RtcSession sessions = 1;
+}

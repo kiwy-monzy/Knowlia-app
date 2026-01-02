@@ -1,0 +1,37 @@
+.header-container {
+  background: #1a1a1a;
+  color: #fff;
+  transition: background 0.3s, color 0.3s;
+}
+
+.header-container.theme-light {
+  color: #222;
+}
+
+.header-container.theme-yellow {
+  color: #222;
+}
+
+.bell-button {
+  background: #fff;
+  color: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+.profile-button {
+  background: #2563eb;
+  color: #fff;
+}
+
+.profile-dropdown {
+  background: #1a1a1a;
+  color: #fafafa;
+}
+
+.profile-name {
+  color: #fafafa;
+}
+
+.profile-username {
+  color: #fafafa;
+}

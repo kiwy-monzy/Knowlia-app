@@ -1,0 +1,149 @@
+
+@import "tailwindcss";
+:root {
+    --radius: 0.5rem; /* Rounded corners */
+    --sidebar: #f4f4f4;
+    --sidebar-foreground: oklch(0.35 0.01 258); /* Dark gray sidebar text */
+    --sidebar-primary: oklch(0.97 0.005 258); /* Light gray sidebar sections */
+    --sidebar-primary-foreground: oklch(0.55 0.15 160); /* Emerald sidebar primary text */
+    --sidebar-accent: oklch(0.65 0.12 160); /* Emerald sidebar accent */
+    --sidebar-accent-foreground: oklch(1 0 0); /* White sidebar accent text */
+    --sidebar-border: oklch(0.92 0.005 258); /* Light sidebar border */
+    --sidebar-ring: oklch(0.55 0.15 160 / 0.3); /* Emerald sidebar focus ring */
+    --sidebar-active: #fafafa;
+    --sidebar-active-text: #1a1a1a;
+    --sidebar-inactive: #1a1a1a;
+    --sidebar-inactive-text: #fafafa;
+  
+    
+    --status-operational: 142 71% 45%;
+    --status-maintenance: 41 100% 55%;
+    --status-inactive: 0 0% 50%;
+    --status-warning: 0 84% 60%;
+  }
+
+
+
+  /* Sidebar Styles - MindYou Inspired */
+  .sidebar-gradient {
+    background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .sidebar-3d-icon {
+    box-shadow: 
+      5px 5px 10px rgba(0, 0, 0, 0.3),
+      -5px -5px 10px rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .sidebar-active {
+    background: var(--sidebar-active) !important;
+    
+    color: var(--sidebar-active-text) !important;
+  }
+  .sidebar-inactive {
+    background: var(--sidebar-inactive) !important;
+    color: var(--sidebar-inactive-text) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    
+  }
+  .sidebar-3d-icon:hover {
+    box-shadow: 
+      8px 8px 16px rgba(0, 0, 0, 0.4),
+      -8px -8px 16px rgba(255, 255, 255, 0.08);
+  }
+  
+  
+  .sidebar-3d-icon.selected {
+    background: linear-gradient(145deg, #d63232, #b91c1c);
+    box-shadow: 
+      inset 2px 2px 4px rgba(0, 0, 0, 0.3),
+      inset -2px -2px 4px rgba(255, 255, 255, 0.1);
+    transform: scale(0.95);
+  }
+  /* Add border to DataEditor tables in Profile page */
+  .data-editor-container, .gdg-root {
+    border: 2px solid var(--border, #ccc) !important;
+    border-radius: 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+  .leaflet-map-container {
+    border: 4px solid #000;
+    border-radius: 16px;
+    box-sizing: border-box;
+    /* For mobile/flex layouts, override as needed, but this is a good default. */
+  }
+  
+  
+  @layer components {
+    .glass-card {
+      background-color: rgb(var(--card) / 0.8);
+    }
+    .glass-card.dark {
+      background-color: rgb(var(--card) / 0.8);
+    }
+  
+    .glass-card-hover {
+      transition: all 300ms ease-in-out;
+    }
+    .glass-card-hover:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+    .glass-card-hover.dark:hover {
+      background-color: rgb(var(--card) / 0.9);
+    }
+    /* 
+      Rewritten: Removed unknown Tailwind utility classes (shadow-neo, shadow-neo-pressed).
+      Replaced with standard box-shadow (for neo-card) and box-shadow: inset for active state.
+    */
+  
+    .neo-card {
+      @apply bg-red-500 transition-all duration-300;
+      box-shadow:
+        8px 8px 16px rgba(0,0,0,0.15),
+        -8px -8px 16px rgba(255,255,255,0.05);
+    }
+  
+    .neo-card-active {
+      box-shadow:
+        inset 2px 2px 8px rgba(0,0,0,0.18),
+        inset -2px -2px 6px rgba(255,255,255,0.04);
+    }
+    
+    .slide-enter {
+      animation: slide-in-bottom 0.4s ease-out forwards;
+    }
+    
+    .counter-digit {
+      @apply inline-block overflow-hidden relative h-8;
+    }
+    
+    .counter-column {
+      @apply transition-transform duration-300 ease-out;
+    }
+  
+    .sidebar-gradient {
+      background: linear-gradient(135deg,
+        rgba(40, 48, 72, 0.95) 0%,
+        var(--sidebar-gradient-start) 20%,
+        var(--sidebar-gradient-end) 60%,
+        var(--sidebar-gradient-black) 100%
+      );
+      background-size: 200% 200%;
+      animation: sidebar-gradient-move 6s ease-in-out infinite;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+  
+    .student-gradient {
+      background: linear-gradient(135deg,
+        rgba(248, 250, 252, 0.95) 0%, /* bg-discord-light, fallback for transparency */
+        #f8fafc 20%, /* bg-discord-light */
+        #e5e7eb 60%, /* a lighter gray for subtle gradient */
+        #cbd5e1 100% /* another light gray for depth */
+      );
+      background-size: 200% 200%;
+      animation: sidebar-gradient-move 6s ease-in-out infinite;
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+    }
+  }

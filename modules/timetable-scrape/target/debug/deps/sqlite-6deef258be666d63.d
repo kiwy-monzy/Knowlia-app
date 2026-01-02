@@ -1,0 +1,12 @@
+G:\qaul.net\tauri-app\modules\timetable-scrape\target\debug\deps\sqlite-6deef258be666d63.d: C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\lib.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\error.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\value.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\connection.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\cursor.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\statement.rs
+
+G:\qaul.net\tauri-app\modules\timetable-scrape\target\debug\deps\libsqlite-6deef258be666d63.rlib: C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\lib.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\error.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\value.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\connection.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\cursor.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\statement.rs
+
+G:\qaul.net\tauri-app\modules\timetable-scrape\target\debug\deps\libsqlite-6deef258be666d63.rmeta: C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\lib.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\error.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\value.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\connection.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\cursor.rs C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\statement.rs
+
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\lib.rs:
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\error.rs:
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\value.rs:
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\connection.rs:
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\cursor.rs:
+C:\Users\PC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\sqlite-0.36.2\src\statement.rs:

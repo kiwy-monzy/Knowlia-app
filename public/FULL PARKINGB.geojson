@@ -1,0 +1,38 @@
+{
+    "type": "FeatureCollection",
+    "name": "Parking Area B",
+    "features": [
+      {
+        "type": "Feature",
+        "properties": {
+          "building_name": "Parking Area B",
+          "location": "UDSM COICT, Kijitonyama",
+          "description": "Parking Area B",
+          "logo": "/src/assets/parking-logo.png",
+          "image": "/src/assets/parking-building.jpg",
+          "hours": "24 Hours",
+          "contact": "+255 22 213 4568",
+          "facilities": ["Parking Area"],
+          "style": {
+            "stroke": "#1a1a1a",
+            "strokeWidth": 2,
+            "fillColor": "#fafafa",
+            "fillOpacity": 1
+          }
+        },
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [39.239785123636317, -6.771832320240531],
+              [39.239824550173431, -6.771779926343026],
+              [39.240110972369472, -6.772008501876127],
+              [39.240077343852533, -6.772058016964747],
+              [39.239785123636317, -6.771832320240531]
+            ]
+          ]
+        }
+      }
+    ]
+  }
+  

@@ -1,0 +1,77 @@
+syntax = "proto3";
+package qaul.net.rtc;
+
+// RTC network message container
+message RtcContainer {
+    oneof message {
+        // rtc session request (with SDP offer)
+        RtcSessionRequest rtc_session_request = 1;
+        // rtc session management (with SDP answer when accepting)
+        RtcSessionManagement rtc_session_management = 2;
+        // ICE candidate exchange
+        RtcIceCandidate rtc_ice_candidate = 3;
+    }
+}
+
+
+// rtc session request (caller sends this with SDP offer)
+message RtcSessionRequest{
+    // type (1: audio, 2: video, 3: screen share)
+    uint32 session_type = 1;
+    // SDP offer from caller (JSON serialized str0m SdpOffer)
+    string sdp_offer = 2;
+}
+
+// rtc session management (callee responds with SDP answer when accepting)
+message RtcSessionManagement{
+    // option (1: accept, 2: deny, 3: end)
+    uint32 option = 1;
+    // SDP answer from callee (JSON serialized str0m SdpAnswer, only when option=1)
+    string sdp_answer = 2;
+}
+
+// ICE candidate message for trickle ICE
+message RtcIceCandidate {
+    // ICE candidate string
+    string candidate = 1;
+    // SDP mid
+    string sdp_mid = 2;
+    // SDP m-line index
+    uint32 sdp_mline_index = 3;
+}
+
+// Rtc message
+message RtcMessage{
+    // sequence
+    uint32 sequence = 1; 
+    // content
+    bytes content = 2;
+}
+
+// Rtc contents
+message RtcContent{
+    // content
+    oneof content{
+        // video content
+        RtcVideoContent video_content = 1; 
+        // audio content
+        RtcAudioContent audio_content = 2; 
+        // chat content
+        RtcChatContent chat_content = 3;
+    }
+}
+
+message RtcChatContent{
+    // content
+    string content = 1;
+}
+
+message RtcVideoContent{
+    // content
+    bytes content = 1;
+}
+
+message RtcAudioContent{
+    // content
+    bytes content = 1;
+}
