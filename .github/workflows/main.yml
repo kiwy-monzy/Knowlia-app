@@ -95,7 +95,7 @@ jobs:
         env:
           VCPKG_DEFAULT_TRIPLET: x64-windows-static
         with:
-          vcpkgGitCommitId: 'latest'
+          vcpkgGitCommitId: 'da9c5c948de8abfed44086968aebb0c1e4154eca'
 
       # ---------- Rust ----------
       - name: Install Rust toolchain
