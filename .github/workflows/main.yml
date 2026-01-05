@@ -74,11 +74,28 @@ jobs:
             patchelf \
             squashfs-tools \
             webkit2gtk-driver \
-            xvfb
+            xvfb \
+            libasound2-dev \
+            libssl-dev \
+            pkg-config
 
       - name: Install macOS dependencies
         if: runner.os == 'macOS'
         run: brew install librsvg
+
+      - name: Install OpenSSL for Windows
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup vcpkg for Windows
+        if: runner.os == 'Windows'
+        uses: lukka/run-vcpkg@v10
+        env:
+          VCPKG_DEFAULT_TRIPLET: x64-windows-static
+        with:
+          vcpkgGitCommitId: 'latest'
 
       # ---------- Rust ----------
       - name: Install Rust toolchain
