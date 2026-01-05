@@ -1,10 +1,5 @@
-<<<<<<< Updated upstream
-name: 'publish'
-
-=======
 name: Tauri Build & Release
- 
->>>>>>> Stashed changes
+
 on:
   push:
     branches:
