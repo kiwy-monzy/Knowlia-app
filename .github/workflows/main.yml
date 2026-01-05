@@ -1,67 +1,280 @@
 name: Tauri Build & Release
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - release
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [ main ]
+  release:
+    types: [ published ]
 
 jobs:
-  build-binaries:
+  build:
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact: linux-x64
+          #- os: macos-latest
+          #  target: x86_64-apple-darwin
+          #  artifact: macos-x64
+          #- os: macos-latest
+          #  target: aarch64-apple-darwin
+          #  artifact: macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact: windows-x64
+          - os: windows-latest
+            target: i686-pc-windows-msvc
+            artifact: windows-x86
 
-    runs-on: ${{ matrix.platform }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: setup node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: install Rust stable
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
 
-      - name: install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
+      - name: Get pnpm cache directory
+        id: pnpm-cache
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev webkit2gtk-4.0 libappindicator3-dev librsvg2-dev patchelf
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
 
-      - uses: tauri-apps/tauri-action@v0.1.5
-        id: tauri_build
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      # ---------- Platform dependencies ----------
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            squashfs-tools \
+            webkit2gtk-driver \
+            xvfb
+
+      - name: Install macOS dependencies
+        if: runner.os == 'macOS'
+        run: brew install librsvg
+
+      # ---------- Rust ----------
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # CRITICAL FIX FOR WINDOWS MSI SIGNING (2025)
+      - name: Use modern signtool.exe (fixes broken default on windows-latest)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          # Find the newest signtool.exe available (10.0.22621+, 10.0.26100+, etc.)
+          $signtool = Get-ChildItem -Path "C:\Program Files (x86)\Windows Kits\10\bin" -Recurse -Filter signtool.exe `
+                      | Sort-Object { [version]($_.Directory.Parent.Name) } -Descending `
+                      | Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not $signtool) {
+            throw "signtool.exe not found in Windows Kits"
+          }
+
+          Write-Host "Using modern signtool: $signtool"
+          Write-Host "TAURI_SIGNER_SIGNTOOL_PATH=$signtool" >> $env:GITHUB_ENV
+
+      # ---------- Frontend ----------
+      - name: Install frontend dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # ---------- Tauri CLI ----------
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --locked --version "^2"
+
+      # ---------- Build ----------
+      - name: Build Tauri app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        run: pnpm tauri build --target ${{ matrix.target }} --verbose
 
-      # The `artifacts` output can now be used by a different action to upload the artifacts
-      - uses: actions/upload-artifact@v3
+      # ---------- Collect artifacts ----------
+      - name: Collect built artifacts
+        shell: bash
+        run: |
+          ARTIFACT_DIR="artifacts-${{ matrix.artifact }}"
+          mkdir -p "$ARTIFACT_DIR"
+
+          # Copy everything from bundle/
+          cp -r src-tauri/target/${{ matrix.target }}/release/bundle/* "$ARTIFACT_DIR"/ 2>/dev/null || true
+
+          # Copy signature files
+          find src-tauri/target/${{ matrix.target }}/release -name "*.sig" -exec cp {} "$ARTIFACT_DIR"/ \; 2>/dev/null || true
+
+          # Copy updater JSON
+          cp src-tauri/target/${{ matrix.target }}/release/*.json "$ARTIFACT_DIR"/ 2>/dev/null || true
+
+          # macOS .app is outside bundle/ on macOS
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            find src-tauri/target/${{ matrix.target }}/release -name "*.app" -exec cp -r {} "$ARTIFACT_DIR"/ \; 2>/dev/null || true
+          fi
+
+          echo "Artifacts for ${{ matrix.artifact }}:"
+          ls -la "$ARTIFACT_DIR" || true
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: artifacts
-          path: "${{ join(fromJSON(steps.tauri_build.outputs.artifacts), '\n') }}"
+          name: tauri-${{ matrix.artifact }}
+          path: artifacts-${{ matrix.artifact }}/
+          retention-days: 7
 
-  publish:
-    needs: build-binaries
+
+  # ============================================================
+  # Release job — uploads to GitHub Release
+  # ============================================================
+  release:
+    needs: build
     runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    permissions:
+      contents: write
+
     steps:
-      - uses: actions/checkout@v4
-      # Download the previously uploaded artifacts
-      - uses: actions/download-artifact@v3
-        id: download
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: artifacts
+          path: downloaded-artifacts
+
+      - name: Prepare and upload release assets
+        run: |
+          mkdir release-assets
+          for dir in downloaded-artifacts/tauri-*; do
+            [[ -d "$dir" ]] || continue
+            platform=$(basename "$dir" | sed 's/tauri-//')
+            cp -r "$dir"/* release-assets/ 2>/dev/null || true
+
+            # Rename files to include platform if not already present
+            cd release-assets
+            for file in *; do
+              [[ -f "$file" ]] || continue
+              if [[ "$file" != *"$platform"* ]] && [[ "$file" != latest* ]] && [[ "$file" != *.* ]]; then
+                ext="${file##*.}"
+                name="${file%.*}"
+                mv "$file" "${name}-${platform}.${ext}"
+              fi
+            done
+            cd ..
+          done
+
+          echo "Final release assets:"
+          ls -lh release-assets/
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-assets/*
+          fail_on_unmatched_files: true
+
+
+  # ============================================================
+  # Auto-create tag vX.Y.Z from tauri.conf.json on push to main
+  # ============================================================
+  create-tag:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version and create tag
+        id: tag
+        run: |
+          VER=$(jq -r '.package.version // .productVersion' src-tauri/tauri.conf.json)
+          TAG="v$VER"
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+          if git ls-remote --tags origin | grep -q "refs/tags/$TAG$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create and push tag
+        if: steps.tag.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tag.outputs.tag }}" -m "Release v${{ steps.tag.outputs.version }}"
+          git push origin "${{ steps.tag.outputs.tag }}"
+
+
+  # ============================================================
+  # Combined archive for manual runs & dev builds
+  # ============================================================
+  combined-archive:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
           path: artifacts
-      # And create a release with the artifacts attached
-      - name: 'create release'
-        uses: softprops/action-gh-release@master
-        env:
-          GITHUB_TOKEN: '${{ secrets.GITHUB_TOKEN }}'
+
+      - name: Create combined archive
+        run: |
+          TS=$(date -u +"%Y%m%d-%H%M%S")
+          SHA=${GITHUB_SHA::8}
+          NAME="tauri-builds_${SHA}_${TS}"
+
+          mkdir "$NAME"
+          find artifacts -type f -exec cp --parents {} "$NAME"/ \;
+
+          cat > "$NAME/README.md" << 'EOF'
+          # Tauri Development Builds
+
+          Commit: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+          Triggered by: ${{ github.event_name }}
+          Date: $(date -u)
+          EOF
+
+          tar -czf "${NAME}.tar.gz" "$NAME"
+          zip -r "${NAME}.zip" "$NAME"
+
+      - name: Upload combined archive
+        uses: actions/upload-artifact@v4
         with:
-          draft: false
-          files: ./artifacts/**/*
+          name: tauri-combined-builds
+          path: |
+            tauri-builds_*.tar.gz
+            tauri-builds_*.zip
+          retention-days: 30
