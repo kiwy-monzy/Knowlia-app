@@ -1,479 +1,473 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Wifi, WifiOff, Activity, Users, Globe, Bluetooth } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import React from 'react';
 import { listen } from '@tauri-apps/api/event';
+import {
+  Wifi,
+  WifiOff,
+  Globe,
+  Bluetooth,
+  Network,
+  UserCheck,
+  X,
+} from 'lucide-react';
+import ReactFlow, {
+  Node,
+  Edge,
+  Background,
+  Controls,
+  MiniMap,
+  Position,
+  Handle,
+  NodeProps,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
 
-// Network node interface
-interface NetworkNode {
-  id: string;
+// ==================== TYPES ====================
+
+export interface UserConnection {
+  peer_id: string;
+  q8id: string;
   name: string;
-  address: string;
-  online: boolean;
-  rttMs?: number;  // Round-trip time in milliseconds
-  connectionType: 'internet' | 'lan' | 'ble' | 'local';
-  x?: number;
-  y?: number;
-  vx?: number;
-  vy?: number;
+  is_online: boolean;
+  connections: Array<{
+    module: number;
+    via_node?: string;
+    hop_count: number;
+    rtt: number;
+  }>;
 }
 
-// API Response interfaces
-interface RawNode {
-  node_id: number[];
-  user_name?: string;
-  name?: string;
-  address?: string;
-  online?: boolean;
-  rtt?: number;
-  connection_type?: string;
+export interface NetworkSettingsProps {
+  users?: UserConnection[];
+  loading?: boolean;
+  error?: string | null;
+  onUserClick?: (user: UserConnection) => void;
 }
 
-interface NeighboursResponse {
-  internet: RawNode[];
-  lan: RawNode[];
-  ble: RawNode[];
-  total_count: number;
-}
+// ==================== HELPER FUNCTIONS ====================
 
-// Network visualization component with force-directed layout
-function NetworkGraph({ nodes }: { nodes: NetworkNode[] }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const positionsRef = useRef<Map<string, { x: number; y: number; vx: number; vy: number }>>(new Map());
-  const animationFrameRef = useRef<number | null>(null);
-  const [localName, setLocalName] = useState('YOU');
-
-  const localNode: NetworkNode = { 
-    id: 'local', 
-    name: localName, 
-    address: '',
-    online: true,
-    connectionType: 'local',
-    x: 400, 
-    y: 300, 
+const getConnectionTypes = (connections: UserConnection['connections']) => {
+  return {
+    internet: connections.some(c => c.module === 2),
+    lan: connections.some(c => c.module === 1),
+    ble: connections.some(c => c.module === 4)
   };
+};
 
-  // Fetch local user profile
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const profileStr = await invoke('user_profile');
-        const profile = JSON.parse(profileStr as string);
-        if (profile.name) {
-          setLocalName(profile.name);
-        }
-      } catch (err) {
-        console.error('Failed to fetch local profile:', err);
-      }
-    };
-    fetchProfile();
-  }, []);
+const getConnectionColor = (user: UserConnection): string => {
+  const connectionTypes = getConnectionTypes(user.connections);
+  
+  if (connectionTypes.internet && connectionTypes.lan && connectionTypes.ble) {
+    return '#8b5cf6';
+  } else if (connectionTypes.internet && connectionTypes.lan) {
+    return '#06b6d4';
+  } else if (connectionTypes.internet && connectionTypes.ble) {
+    return '#f59e0b';
+  } else if (connectionTypes.lan && connectionTypes.ble) {
+    return '#10b981';
+  } else if (connectionTypes.internet) {
+    return '#3b82f6';
+  } else if (connectionTypes.lan) {
+    return '#10b981';
+  } else if (connectionTypes.ble) {
+    return '#f97316';
+  }
+  return '#6b7280';
+};
 
-  // Initialize node positions
-  useEffect(() => {
-    let needsUpdate = false;
-    const newPositions = new Map(positionsRef.current);
-    const existingIds = new Set(Array.from(positionsRef.current.keys()));
-    
-    // Remove nodes that no longer exist
-    existingIds.forEach(id => {
-      if (!nodes.some(n => n.id === id)) {
-        newPositions.delete(id);
-        needsUpdate = true;
-      }
-    });
+const getInitials = (name: string): string => {
+  return name
+    .split(' ')
+    .map(word => word.charAt(0))
+    .join('')
+    .substring(0, 2)
+    .toUpperCase();
+};
 
-    // Add new nodes with positions
-    nodes.forEach(node => {
-      if (!newPositions.has(node.id)) {
-        // Position new nodes in a circle around the center
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 150 + Math.random() * 150;
-        newPositions.set(node.id, {
-          x: localNode.x! + Math.cos(angle) * radius,
-          y: localNode.y! + Math.sin(angle) * radius,
-          vx: 0,
-          vy: 0
-        });
-        needsUpdate = true;
-      }
-    });
+// ==================== CUSTOM NODE COMPONENT ====================
 
-    if (needsUpdate) {
-      positionsRef.current = newPositions;
-    }
-  }, [nodes]);
-
-  // Physics simulation and rendering
-  useEffect(() => {
-    if (nodes.length === 0) {
-      // Clear canvas if no nodes
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animationId: number;
-    let lastTime = 0;
-    const frameRate = 60; // Target 60 FPS
-    const frameInterval = 1000 / frameRate;
-
-    const animate = (timestamp: number) => {
-      // Throttle frame rate
-      const deltaTime = timestamp - lastTime;
-      if (deltaTime < frameInterval) {
-        animationId = requestAnimationFrame(animate);
-        return;
-      }
-      lastTime = timestamp - (deltaTime % frameInterval);
-
-      // Clear canvas
-      ctx.clearRect(0, 0, 800, 600);
-
-      const currentPositions = positionsRef.current;
-      const newPositions = new Map(currentPositions);
-      
-      // Apply forces
-      nodes.forEach((node1, i) => {
-        const pos1 = newPositions.get(node1.id);
-        if (!pos1) return;
-
-        // Repulsion from other nodes
-        nodes.forEach((node2, j) => {
-          if (i === j) return;
-          const pos2 = newPositions.get(node2.id);
-          if (!pos2) return;
-
-          const dx = pos2.x - pos1.x;
-          const dy = pos2.y - pos1.y;
-          const distance = Math.sqrt(dx * dx + dy * dy) || 1;
-          
-          if (distance < 100) {
-            const force = 500 / (distance * distance);
-            pos1.vx -= (dx / distance) * force;
-            pos1.vy -= (dy / distance) * force;
-          }
-        });
-
-        // Attraction to center (local node)
-        const dxCenter = localNode.x! - pos1.x;
-        const dyCenter = localNode.y! - pos1.y;
-        const distCenter = Math.sqrt(dxCenter * dxCenter + dyCenter * dyCenter) || 1;
-        const targetDist = 150;
-        const springForce = (distCenter - targetDist) * 0.01;
-        
-        pos1.vx += (dxCenter / distCenter) * springForce;
-        pos1.vy += (dyCenter / distCenter) * springForce;
-
-        // Apply velocity with damping and smooth movement
-        pos1.vx *= 0.85;
-        pos1.vy *= 0.85;
-        
-        // Apply smooth movement with easing
-        const dx = (pos1.x + pos1.vx) - pos1.x;
-        const dy = (pos1.y + pos1.vy) - pos1.y;
-        pos1.x += dx * 0.2; // Adjust the multiplier for more/less smoothness
-        pos1.y += dy * 0.2;
-
-        // Boundary constraints
-        const margin = 50;
-        if (pos1.x < margin) { pos1.x = margin; pos1.vx = 0; }
-        if (pos1.x > 800 - margin) { pos1.x = 800 - margin; pos1.vx = 0; }
-        if (pos1.y < margin) { pos1.y = margin; pos1.vy = 0; }
-        if (pos1.y > 600 - margin) { pos1.y = 600 - margin; pos1.vy = 0; }
-      });
-
-      // Update the ref with new positions
-      positionsRef.current = newPositions;
-
-      // Draw connections with ping times
-      nodes.forEach(node => {
-        const pos = newPositions.get(node.id);
-        if (!pos) return;
-        
-        // Calculate midpoint for the ping text
-        const midX = (localNode.x! + pos.x) / 2;
-        const midY = (localNode.y! + pos.y) / 2;
-        
-        // Draw connection line
-        ctx.beginPath();
-        ctx.moveTo(localNode.x!, localNode.y!);
-        ctx.lineTo(pos.x, pos.y);
-        
-        if (node.online) {
-          ctx.strokeStyle = node.connectionType === 'internet' ? 'rgba(59, 130, 246, 0.4)' :
-                           node.connectionType === 'lan' ? 'rgba(16, 185, 129, 0.4)' :
-                           node.connectionType === 'ble' ? 'rgba(245, 158, 11, 0.4)' : 'rgba(156, 163, 175, 0.3)';
-          ctx.setLineDash([]);
-        } else {
-          ctx.strokeStyle = 'rgba(107, 114, 128, 0.3)';
-          ctx.setLineDash([5, 5]);
-        }
-        
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        
-        // Draw ping time if available
-        if (node.rttMs !== undefined && node.online) {
-          const pingText = node.rttMs < 10 && node.rttMs > 0 ? `${node.rttMs.toFixed(1)}ms` : `${Math.round(node.rttMs)}ms`;
-          const textWidth = ctx.measureText(pingText).width;
-          const padding = 6;
-          const radius = 8;
-          
-          // Draw background for better readability
-          ctx.beginPath();
-          ctx.roundRect(
-            midX - textWidth/2 - padding, 
-            midY - 10, 
-            textWidth + padding * 2, 
-            16, 
-            radius
-          );
-          
-          // Style based on connection type
-          if (node.connectionType === 'internet') {
-            ctx.fillStyle = 'rgba(59, 130, 246, 0.8)';
-          } else if (node.connectionType === 'lan') {
-            ctx.fillStyle = 'rgba(16, 185, 129, 0.8)';
-          } else if (node.connectionType === 'ble') {
-            ctx.fillStyle = 'rgba(245, 158, 11, 0.8)';
-          } else {
-            ctx.fillStyle = 'rgba(156, 163, 175, 0.8)';
-          }
-          
-          ctx.fill();
-          
-          // Draw ping text
-          ctx.fillStyle = '#ffffff';
-          ctx.font = 'bold 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(pingText, midX, midY + 1);
-        }
-      });
-
-      // Draw local node
-      ctx.beginPath();
-      ctx.arc(localNode.x!, localNode.y!, 35, 0, Math.PI * 2);
-      ctx.fillStyle = '#8b5cf6';
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(localNode.name.length > 5 ? localNode.name.substring(0, 4) + '..' : localNode.name.toUpperCase(), localNode.x!, localNode.y!);
-
-      // Draw network nodes
-      nodes.forEach(node => {
-        const pos = newPositions.get(node.id);
-        if (!pos) return;
-
-        // Node circle
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 28, 0, Math.PI * 2);
-        
-        if (node.online) {
-          ctx.fillStyle = node.connectionType === 'internet' ? '#3b82f6' :
-                          node.connectionType === 'lan' ? '#10b981' :
-                          node.connectionType === 'ble' ? '#f59e0b' : '#6b7280';
-        } else {
-          ctx.fillStyle = '#6b7280';
-        }
-        
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-
-        // Node label - show first letter as initial in the center
-        const isAnonymous = node.name.startsWith('Node-');
-        const initial = isAnonymous ? '?' : node.name.charAt(0).toUpperCase();
-        ctx.fillStyle = '#ffffff';
-        ctx.font = isAnonymous ? 'bold 18px sans-serif' : 'bold 14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(initial, pos.x, pos.y);
-        
-        // Name below node - ensure it's not too long
-        const maxWidth = 100; // Increased max width
-        let displayName = node.name;
-        
-        ctx.font = 'bold 12px sans-serif'; // Larger, bolder font
-        const textMetrics = ctx.measureText(displayName);
-        
-        // Truncate long names with ellipsis
-        if (textMetrics.width > maxWidth) {
-          while (displayName.length > 3 && ctx.measureText(displayName + '...').width > maxWidth) {
-            displayName = displayName.substring(0, displayName.length - 1);
-          }
-          displayName += '...';
-        }
-        
-        ctx.fillStyle = '#1f2937'; // Darker for better contrast
-        ctx.textAlign = 'center';
-        ctx.fillText(displayName, pos.x, pos.y + 44);
-        
-        // Connection type badge
-        ctx.font = 'italic 10px sans-serif';
-        ctx.fillStyle = '#6b7280';
-        const typeLabel = node.connectionType.toUpperCase();
-        ctx.fillText(typeLabel, pos.x, pos.y + 58);
-      });
-
-      // Schedule next frame with the callback that includes timestamp
-      animationId = requestAnimationFrame(animate);
-    };
-
-    // Start animation with timestamp
-    animationId = requestAnimationFrame(animate);
-
-    // Cleanup
-    return () => {
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-    };
-  }, [nodes]); // Only re-run if nodes change
+const UserNode = React.memo(({ data }: NodeProps) => {
+  const { user, selected } = data;
+  const connectionTypes = getConnectionTypes(user.connections);
 
   return (
-    <div className="relative w-full bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
-      <canvas 
-        ref={canvasRef}
-        width={800}
-        height={600}
-        className="w-full h-auto"
-      />
+    <div
+      className={`px-4 py-2 rounded-full border-2 shadow-lg transition-all cursor-pointer hover:scale-105 ${
+        selected ? 'ring-2 ring-purple-500 ring-offset-2' : ''
+      }`}
+      style={{
+        backgroundColor: user.is_online ? getConnectionColor(user) : '#9ca3af',
+        borderColor: '#ffffff',
+        minWidth: '80px',
+      }}
+    >
+      <Handle type="target" position={Position.Top} className="!w-2 !h-2" />
+      <div className="text-center">
+        <div className="text-white font-bold text-sm">{getInitials(user.name)}</div>
+        <div className="text-white text-xs mt-1 truncate max-w-[100px]">
+          {user.name.length > 12
+            ? user.name.substring(0, 11) + '..'
+            : user.name}
+        </div>
+        <div className="flex items-center justify-center gap-1 mt-1">
+          {connectionTypes.internet && <Globe size={12} className="text-white" />}
+          {connectionTypes.lan && <Wifi size={12} className="text-white" />}
+          {connectionTypes.ble && <Bluetooth size={12} className="text-white" />}
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="!w-2 !h-2" />
     </div>
   );
+});
+
+UserNode.displayName = 'UserNode';
+
+// Relay node component for invisible intermediate nodes
+const RelayNode = React.memo(({ data }: NodeProps) => {
+  return (
+    <div
+      className="w-4 h-4 rounded-full bg-gray-300 border-2 border-gray-400"
+      style={{
+        minWidth: '16px',
+        minHeight: '16px',
+      }}
+    >
+      <Handle type="target" position={Position.Top} className="!w-1 !h-1" />
+      <Handle type="source" position={Position.Bottom} className="!w-1 !h-1" />
+    </div>
+  );
+});
+
+RelayNode.displayName = 'RelayNode';
+
+// Module-level nodeTypes - stable reference
+const NODE_TYPES = {
+  custom: UserNode,
+  relay: RelayNode,
+};
+
+// ==================== NETWORK GRAPH COMPONENT ====================
+
+interface NetworkGraphProps {
+  users: UserConnection[];
+  selectedUser: UserConnection | null;
+  showFilters: { internet: boolean; lan: boolean; ble: boolean };
+  onUserClick?: (user: UserConnection) => void;
 }
 
-export default function NetworkSettings() {
-  const [neighbors, setNeighbors] = useState<NetworkNode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const NetworkGraph: React.FC<NetworkGraphProps> = React.memo(({
+  users,
+  selectedUser,
+  showFilters,
+  onUserClick,
+}) => {
+  if (!Array.isArray(users) || users.length === 0) {
+    return (
+      <div className="h-96 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center">
+        <p className="text-gray-500">No network data available</p>
+      </div>
+    );
+  }
 
-  // Convert Uint8Array (or number[]) to hex string
-  const bytesToHex = (bytes: number[] | Uint8Array): string => 
-    Array.from(bytes).map((b: number) => b.toString(16).padStart(2, '0')).join('');
-
-  const fetchNeighbors = useCallback(async () => {
-    try {
-      setLoading(true);
-      const raw = await invoke('get_all_neighbours');
-      const parsed: NeighboursResponse = raw as NeighboursResponse;
+  // ⭐ FIRST: Filter users based on connection types
+  const filteredUsers = React.useMemo(() => {
+    return users.filter((user) => {
+      const connectionTypes = getConnectionTypes(user.connections);
       
-      setNeighbors(prevNeighbors => {
-        // Create a map of existing nodes for quick lookup
-        const existingNodes = new Map(prevNeighbors.map(n => [n.id, n]));
-        const newNeighbors: NetworkNode[] = [];
-        let hasChanges = false;
+      if (!showFilters.internet && connectionTypes.internet) return false;
+      if (!showFilters.lan && connectionTypes.lan) return false;
+      if (!showFilters.ble && connectionTypes.ble) return false;
+      
+      return true;
+    });
+  }, [users, showFilters]);
 
-        // Process each category of neighbors
-        ['internet', 'lan', 'ble'].forEach((key) => {
-          const list = parsed[key as keyof Omit<NeighboursResponse, 'total_count'>] as RawNode[] | undefined;
-          if (!list) return;
+  // ⭐ SECOND: Collect all unique node IDs (users + relay nodes)
+  const allNodeIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    
+    // Add user IDs
+    filteredUsers.forEach(user => ids.add(user.peer_id));
+    
+    // Add relay node IDs from connections
+    filteredUsers.forEach(user => {
+      user.connections.forEach(conn => {
+        if (conn.via_node) {
+          ids.add(conn.via_node);
+        }
+      });
+    });
+    
+    return ids;
+  }, [filteredUsers]);
+
+  // ⭐ THIRD: Generate nodes - users + relay nodes
+  const nodes: Node[] = React.useMemo(() => {
+    const nodeList: Node[] = [];
+    const centerX = 400;
+    const centerY = 300;
+    const radius = 250;
+    const nodeCount = allNodeIds.size;
+
+    // Convert Set to Array for indexing
+    const nodeIdArray = Array.from(allNodeIds);
+    
+    // Create nodes for all IDs
+    nodeIdArray.forEach((nodeId, index) => {
+      const angle = (index / nodeCount) * Math.PI * 2;
+      const x = centerX + Math.cos(angle) * radius;
+      const y = centerY + Math.sin(angle) * radius;
+
+      // Check if this is a user node or relay node
+      const user = filteredUsers.find(u => u.peer_id === nodeId);
+      
+      if (user) {
+        // User node - visible
+        nodeList.push({
+          id: nodeId,
+          type: 'custom',
+          position: { x, y },
+          data: {
+            user,
+            selected: selectedUser?.peer_id === nodeId,
+          },
+        });
+      } else {
+        // Relay node - invisible (small gray dot)
+        nodeList.push({
+          id: nodeId,
+          type: 'relay',
+          position: { x, y },
+          data: {
+            isRelay: true,
+          },
+        });
+      }
+    });
+
+    return nodeList;
+  }, [allNodeIds, filteredUsers, selectedUser]);
+
+  // ⭐ FOURTH: Create edges between all nodes
+  const edges: Edge[] = React.useMemo(() => {
+    const edgeList: Edge[] = [];
+    const seenEdges = new Set<string>();
+    
+    filteredUsers.forEach((user) => {
+      user.connections.forEach((connection) => {
+        if (!connection.via_node) return;
+        
+        // Create unique edge ID
+        const edgeIdParts = [user.peer_id, connection.via_node].sort();
+        const edgeId = `${edgeIdParts[0]}-${edgeIdParts[1]}-${connection.module}`;
+        
+        if (!seenEdges.has(edgeId)) {
+          seenEdges.add(edgeId);
           
-          list.forEach((n) => {
-            const nodeId = bytesToHex(n.node_id ?? []);
-            const existingNode = existingNodes.get(nodeId);
-            const nodeName = n.user_name || n.name || 'Unknown';
-            const isNewNode = !existingNode;
-            const nodeChanged = isNewNode || 
-              existingNode?.name !== nodeName || 
-              existingNode?.online !== (n.online ?? true) ||
-              existingNode?.rttMs !== n.rtt;
+          let edgeColor = '#94a3b8';
+          
+          if (connection.module === 2) {
+            edgeColor = '#3b82f6';
+          } else if (connection.module === 1) {
+            edgeColor = '#10b981';
+          } else if (connection.module === 4) {
+            edgeColor = '#f97316';
+          }
+          
+          edgeList.push({
+            id: edgeId,
+            source: user.peer_id,
+            target: connection.via_node,
+            type: 'smoothstep',
+            style: {
+              stroke: edgeColor,
+              strokeWidth: 2,
+              opacity: 0.6,
+            },
+            animated: user.is_online,
+            data: {
+              module: connection.module,
+            },
+          });
+        }
+      });
+    });
 
-            if (isNewNode || nodeChanged) {
-              hasChanges = true;
-              
-              // Calculate position for new nodes
-              let x, y;
-              if (key === 'internet') {
-                // Position internet nodes at the top center
-                const internetNodes = newNeighbors.filter(n => n.connectionType === 'internet');
-                const angle = (internetNodes.length / 5) * Math.PI * 2;
-                x = 400 + Math.cos(angle) * 100;
-                y = 150 + Math.sin(angle) * 30;
-              } else if (key === 'lan') {
-                // Position LAN nodes in a circle around the center
-                const lanNodes = newNeighbors.filter(n => n.connectionType === 'lan');
-                const angle = (lanNodes.length / 5) * Math.PI * 2;
-                x = 400 + Math.cos(angle) * 200;
-                y = 300 + Math.sin(angle) * 150;
-              } else {
-                // Position BLE nodes in an outer circle
-                const bleNodes = newNeighbors.filter(n => n.connectionType === 'ble');
-                const angle = (bleNodes.length / 5) * Math.PI * 2;
-                x = 400 + Math.cos(angle) * 250;
-                y = 300 + Math.sin(angle) * 200;
-              }
+    console.log(`Created ${edgeList.length} edges for ${nodes.length} nodes (${filteredUsers.length} users + ${nodes.length - filteredUsers.length} relay nodes)`);
+    return edgeList;
+  }, [filteredUsers, nodes.length]);
 
-              newNeighbors.push({
-                id: nodeId,
-                name: nodeName,
-                address: n.address || '',
-                online: n.online !== undefined ? n.online : true,
-                rttMs: n.rtt,
-                connectionType: (n.connection_type || key) as 'internet' | 'lan' | 'ble',
-                x: existingNode?.x ?? x,
-                y: existingNode?.y ?? y,
-                vx: existingNode?.vx ?? 0,
-                vy: existingNode?.vy ?? 0
-              });
-            } else {
-              // Keep existing node with its current position
-              newNeighbors.push(existingNode);
+  const onNodeClick = React.useCallback((_: React.MouseEvent, node: Node) => {
+    // Only allow clicking on user nodes, not relay nodes
+    if (node.type === 'relay') return;
+    
+    if (onUserClick) {
+      const user = users.find(u => u.peer_id === node.id);
+      if (user) {
+        onUserClick(user);
+      }
+    }
+  }, [onUserClick, users]);
+
+  const getNodeMiniMapColor = React.useCallback((node: Node): string => {
+    const user = users.find(u => u.peer_id === node.id);
+    if (!user) return '#d1d5db';
+    return getConnectionColor(user);
+  }, [users]);
+
+  return (
+    <div className="h-96 bg-gray-50 rounded-lg border border-gray-200">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={NODE_TYPES}
+        onNodeClick={onNodeClick}
+        fitView
+        attributionPosition="bottom-left"
+      >
+        <Background color="#e5e7eb" gap={16} />
+        <Controls />
+        <MiniMap nodeColor={getNodeMiniMapColor} />
+      </ReactFlow>
+    </div>
+  );
+});
+
+NetworkGraph.displayName = 'NetworkGraph';
+
+// ==================== MAIN NETWORK SETTINGS COMPONENT ====================
+
+const areUsersEqual = (a: UserConnection[] | undefined, b: UserConnection[] | undefined): boolean => {
+  if (!a && !b) return true;
+  if (!a || !b) return false;
+  if (!Array.isArray(a) || !Array.isArray(b)) return false;
+  
+  if (a.length !== b.length) return false;
+  return a.every((user, index) => {
+    const other = b[index];
+    return (
+      user.peer_id === other.peer_id &&
+      user.q8id === other.q8id &&
+      user.name === other.name &&
+      user.is_online === other.is_online &&
+      JSON.stringify(user.connections) === JSON.stringify(other.connections)
+    );
+  });
+};
+
+export default function NetworkSettings({
+  users = [],
+  loading = false,
+  error = null,
+  onUserClick,
+}: NetworkSettingsProps) {
+  const [selectedUser, setSelectedUser] = React.useState<UserConnection | null>(null);
+  const [showFilters, setShowFilters] = React.useState({
+    internet: true,
+    lan: true,
+    ble: true,
+  });
+  const [networkUsers, setNetworkUsers] = React.useState<UserConnection[]>([]);
+
+  React.useEffect(() => {
+    let unlisten: (() => void) | null = null;
+
+    const setupEventListener = async () => {
+      try {
+        unlisten = await listen<UserConnection[]>('neighbors-updated', (event) => {
+          console.log('Received neighbors-updated event:', event.payload);
+          
+          let parsedPayload = event.payload;
+          if (typeof event.payload === 'string') {
+            try {
+              parsedPayload = JSON.parse(event.payload);
+            } catch (error) {
+              console.error('Failed to parse event payload:', error);
+              return;
             }
+          }
+          
+          setNetworkUsers(prevUsers => {
+            if (areUsersEqual(prevUsers, parsedPayload)) {
+              return prevUsers;
+            }
+            return parsedPayload;
           });
         });
+      } catch (error) {
+        console.error('Failed to setup event listener:', error);
+      }
+    };
 
-        return hasChanges ? newNeighbors : prevNeighbors;
-      });
-      
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch neighbors:', err);
-      setError('Failed to load network information');
-    } finally {
-      setLoading(false);
-    }
+    setupEventListener();
+
+    return () => {
+      if (unlisten) {
+        try {
+          unlisten();
+        } catch (error) {
+          console.error('Error cleaning up event listener:', error);
+        }
+      }
+    };
   }, []);
 
-  useEffect(() => {
-    // Initial fetch
-    fetchNeighbors();
-    
-    // Listen for background updates
-    const unlisten = listen('neighbors-updated', fetchNeighbors);
-    
-    // Cleanup
-    return () => {
-      unlisten.then(f => f());
+  React.useEffect(() => {
+    setNetworkUsers(prevUsers => {
+      if (areUsersEqual(prevUsers, users)) {
+        return prevUsers;
+      }
+      return users;
+    });
+  }, [users]);
+
+  const handleUserClick = React.useCallback(
+    (user: UserConnection) => {
+      setSelectedUser(user);
+      if (onUserClick) {
+        onUserClick(user);
+      }
+    },
+    [onUserClick]
+  );
+
+  const handleFilterChange = React.useCallback((type: keyof typeof showFilters, value: boolean) => {
+    setShowFilters(prev => ({ ...prev, [type]: value }));
+  }, []);
+
+  const handleShowAll = React.useCallback(() => {
+    setShowFilters({ internet: true, lan: true, ble: true });
+  }, []);
+
+  const stats = React.useMemo(() => {
+    if (!Array.isArray(networkUsers)) {
+      return { total: 0, internet: 0, lan: 0, ble: 0, multiConnection: 0 };
+    }
+
+    const onlineUsers = networkUsers.filter((u) => u.is_online);
+    const internetUsers = onlineUsers.filter((u) => 
+      u.connections.some(c => c.module === 2)
+    );
+    const lanUsers = onlineUsers.filter((u) => 
+      u.connections.some(c => c.module === 1)
+    );
+    const bleUsers = onlineUsers.filter((u) => 
+      u.connections.some(c => c.module === 4)
+    );
+    const multiConnectionUsers = onlineUsers.filter((u) => {
+      const connectionTypes = getConnectionTypes(u.connections);
+      return [connectionTypes.internet, connectionTypes.lan, connectionTypes.ble].filter(Boolean).length >= 2;
+    });
+
+    return {
+      total: onlineUsers.length,
+      internet: internetUsers.length,
+      lan: lanUsers.length,
+      ble: bleUsers.length,
+      multiConnection: multiConnectionUsers.length,
     };
-  }, [fetchNeighbors]);
+  }, [networkUsers]);
 
-  const getStats = () => {
-    const totalCount = neighbors.length;
-    const internetCount = neighbors.filter(n => n.connectionType === 'internet').length;
-    const lanCount = neighbors.filter(n => n.connectionType === 'lan').length;
-    const bleCount = neighbors.filter(n => n.connectionType === 'ble').length;
-    
-    return { totalCount, internetCount, lanCount, bleCount };
-  };
-
+  const hasNetworkUsers = Array.isArray(networkUsers) && networkUsers.length > 0;
 
   return (
     <div className="p-6 pb-18 space-y-6 bg-white min-h-screen">
@@ -481,18 +475,118 @@ export default function NetworkSettings() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Network Monitor</h2>
-          <p className="text-gray-600 mt-1">Real-time qaul network topology and connections</p>
+          <p className="text-gray-600 mt-1">Real-time network topology and user connections</p>
         </div>
-        <div className="flex items-center space-x-3 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
-          <Activity className="w-5 h-5 text-green-600 animate-pulse" />
-          <span className="text-sm font-semibold text-green-700">
-            {neighbors.length > 0 ? 'Network Active' : 'No Connections'}
-          </span>
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-3 px-4 py-2 bg-green-50 rounded-lg border border-green-200">
+            <UserCheck className="w-5 h-5 text-green-600 animate-pulse" />
+            <span className="text-sm font-semibold text-green-700">
+              {stats.total} Online Users
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Connection Type Filters */}
+      <div className="bg-gray-100 p-4 rounded-xl border border-gray-200">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Connection Filters</h3>
+          <button
+            onClick={handleShowAll}
+            className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+          >
+            Show All
+          </button>
+        </div>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center space-x-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFilters.internet}
+                onChange={(e) => handleFilterChange('internet', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+            <span className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+              <Globe className="w-4 h-4 text-blue-600" />
+              <span>Internet</span>
+              <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">
+                {stats.internet}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFilters.lan}
+                onChange={(e) => handleFilterChange('lan', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+            </label>
+            <span className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+              <Wifi className="w-4 h-4 text-green-600" />
+              <span>LAN</span>
+              <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                {stats.lan}
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showFilters.ble}
+                onChange={(e) => handleFilterChange('ble', e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-600"></div>
+            </label>
+            <span className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+              <Bluetooth className="w-4 h-4 text-orange-600" />
+              <span>BLE</span>
+              <span className="bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full">
+                {stats.ble}
+              </span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Statistics Panel */}
+      <div className="bg-gray-100 p-4 rounded-xl border border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-700 mb-3">Connection Statistics</h3>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-xs">
+          <div className="text-center">
+            <div className="text-lg font-bold text-gray-900">{stats.total}</div>
+            <div className="text-gray-600">Total Users</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-blue-600">{stats.internet}</div>
+            <div className="text-gray-600">🌐 Internet</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-green-600">{stats.lan}</div>
+            <div className="text-gray-600">🏠 LAN</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-orange-600">{stats.ble}</div>
+            <div className="text-gray-600">📱 BLE</div>
+          </div>
+          <div className="text-center">
+            <div className="text-lg font-bold text-purple-600">{stats.multiConnection}</div>
+            <div className="text-gray-600">🔄 Multi-Conn</div>
+          </div>
         </div>
       </div>
 
       {/* Network Visualization */}
-      <div className="bg-white  p-6 rounded-xl border border-gray-200 shadow-sm">
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4 text-xs">
             <div className="flex items-center space-x-2">
@@ -505,11 +599,15 @@ export default function NetworkSettings() {
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-              <span className="text-gray-600">Bluetooth</span>
+              <span className="text-gray-600">BLE</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+              <span className="text-gray-600">Multi-Connection</span>
             </div>
           </div>
         </div>
-        
+
         {loading ? (
           <div className="flex items-center justify-center h-96">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-200 border-t-purple-600"></div>
@@ -518,18 +616,153 @@ export default function NetworkSettings() {
           <div className="flex items-center justify-center h-96">
             <p className="text-red-600">{error}</p>
           </div>
-        ) : neighbors.length === 0 ? (
+        ) : !hasNetworkUsers ? (
           <div className="flex flex-col items-center justify-center h-96 text-center">
             <WifiOff className="w-16 h-16 text-gray-300 mb-4" />
             <p className="text-gray-600 font-medium">No network connections found</p>
             <p className="text-sm text-gray-500 mt-1">Try connecting to other qaul nodes</p>
           </div>
         ) : (
-          <NetworkGraph nodes={neighbors} />
+          <NetworkGraph
+            users={networkUsers}
+            selectedUser={selectedUser}
+            showFilters={showFilters}
+            onUserClick={handleUserClick}
+          />
         )}
       </div>
 
+      {/* User Details Panel */}
+      {selectedUser && (
+        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+              <Network className="w-5 h-5 text-blue-600" />
+              <span>User Connection Details</span>
+            </h3>
+            <button
+              onClick={() => setSelectedUser(null)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-3">User Profile</h4>
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div 
+                    className="w-16 h-16 rounded-full flex items-center justify-center border-2 border-white shadow-sm"
+                    style={{
+                      background: `linear-gradient(135deg, ${getConnectionColor(selectedUser)}, #8b5cf6)`
+                    }}
+                  >
+                    <span className="text-white font-bold text-lg">
+                      {selectedUser.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h5 className="font-semibold text-gray-900 text-lg truncate">
+                      {selectedUser.name}
+                    </h5>
+                  </div>
+
+                  <div className="flex items-center space-x-2 text-sm text-gray-600 mb-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <span className={`w-2 h-2 rounded-full mr-1 ${selectedUser.is_online ? 'bg-green-400' : 'bg-red-400'}`}></span>
+                      {selectedUser.is_online ? 'Online' : 'Offline'}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Peer ID: {selectedUser.peer_id.substring(0, 8)}...
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-gray-600">
+                    <p>Q8 ID: {selectedUser.q8id}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-900 mb-2">Connection Types</h4>
+              <div className="space-y-2">
+                {selectedUser.connections.some(c => c.module === 2) && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center space-x-2">
+                      <Globe className="w-4 h-4 text-blue-600" />
+                      <span>Internet</span>
+                    </span>
+                    <div className="text-right">
+                      {(() => {
+                        const conn = selectedUser.connections.find(c => c.module === 2);
+                        return (
+                          <>
+                            {conn && (
+                              <span className="text-gray-600">
+                                {(conn.rtt / 1000).toFixed(2)}ms
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {selectedUser.connections.some(c => c.module === 1) && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center space-x-2">
+                      <Wifi className="w-4 h-4 text-green-600" />
+                      <span>LAN</span>
+                    </span>
+                    <div className="text-right">
+                      {(() => {
+                        const conn = selectedUser.connections.find(c => c.module === 1);
+                        return (
+                          <>
+                            {conn && (
+                              <span className="text-gray-600">
+                                {(conn.rtt / 1000).toFixed(2)}ms
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+                {selectedUser.connections.some(c => c.module === 4) && (
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center space-x-2">
+                      <Bluetooth className="w-4 h-4 text-orange-600" />
+                      <span>Bluetooth</span>
+                    </span>
+                    <div className="text-right">
+                      {(() => {
+                        const conn = selectedUser.connections.find(c => c.module === 4);
+                        return (
+                          <>
+                            {conn && (
+                              <span className="text-gray-600">
+                                {(conn.rtt / 1000).toFixed(2)}ms
+                              </span>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

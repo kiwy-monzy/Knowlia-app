@@ -1,6 +1,6 @@
 [package]
 name = "knowlia"
-version = "0.1.0"
+version = "1.1.2"
 description = "A Tauri App"
 authors = ["you"]
 default-run = "knowlia"
@@ -11,9 +11,9 @@ edition = "2021"
 name = "knowlia"
 path = "src/main.rs"
 
-[[bin]]
-name = "server"
-path = "src/bin/server.rs"
+#[[bin]]
+#name = "server"
+#path = "src/bin/server.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -40,13 +40,13 @@ tauri-plugin-process = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-fs = "2"
 tauri-plugin-cache = "0.1.6"
-tauri-plugin-sql = { version = "2.0.0", features = ["sqlite"] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-system-info = { git = "https://github.com/HuakunShen/tauri-plugin-system-info", branch = "v2" }
 tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }
-libp2p = { version = "0.54", features = ["ed25519", "noise", "tcp", "yamux", "macros"] }
+libp2p = { version = "0.55.0", features = ["ed25519", "noise", "tcp", "yamux", "macros"] }
 log = "0.4"
 # Add libqaul as a dependency
 libqaul = { path = "../modules/libqaul" }
@@ -63,7 +63,7 @@ bs58 = "0.5"
 uuid = { version = "1.13", features = ["v4", "serde"] }
 prost = "0.14"
 state = "0.6"
-env_logger = "0.10"
+env_logger = "0.11.8"
 #########
 reqwest = { version = "0.12.8", features = ["json", "stream"] }
 text_trees = "0.1.2"
@@ -110,7 +110,7 @@ rten-tensor = "0.22.1"
 axum = "0.8.6"
 tauri-plugin-media = "0.1.1"
 tauri-plugin-oauth = { git = "https://github.com/FabianLars/tauri-plugin-oauth" }
-zotero = "0.0.2"
+#zotero = "0.0.2"
 # Add mega-rs as a dependency
 mega = { path = "../modules/mega-rs" }
 

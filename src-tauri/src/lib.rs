@@ -39,7 +39,16 @@ use crate::commands::zotero::configure_zotero;
 use crate::commands::zotero::init_zotero;
 use crate::tauri::group::open_file;
 use crate::commands::zotero::is_zotero_configured;
-use crate::tauri::user::get_all_neighbours;
+use crate::tauri::user::get_all_user_network_mappings;
+use crate::tauri::ble::{
+    get_ble_info,
+    get_ble_status,
+    start_ble,
+    stop_ble,
+    get_discovered_devices,
+    request_ble_permissions,
+    send_ble_message,
+};
 // Commands modules - uncomment when needed
  use commands::bolt::{confirm_verification, get_location_suggestions, start_verification};
 use commands::gdrive::{
@@ -885,20 +894,21 @@ async fn get_taxi_vehicles() -> Result<Vec<taxi_service::TaxiVehicle>, String> {
 /// Background data sync service that runs periodically
 async fn background_data_sync_service(app_handle: AppHandle) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
-    let mut last_neighbors: Option<String> = None;
+    let mut last_network_mappings: Option<String> = None;
     
     loop {
         interval.tick().await;
         
-        // Check for network updates
-        let network_info = get_all_neighbours();
-        let network_info_str = network_info.to_string();
-        
-        if last_neighbors.as_ref().map_or(true, |last| last != &network_info_str) {
-            if let Err(e) = app_handle.emit("neighbors-updated", ()) {
-                tracing::error!("Failed to emit neighbors-updated event: {}", e);
+        // Check for network updates using new network mapping
+        if let Ok(network_mappings_json) = get_all_user_network_mappings().await {
+            if last_network_mappings.as_ref().map_or(true, |last| last != &network_mappings_json) {
+                if let Err(e) = app_handle.emit("neighbors-updated", &network_mappings_json) {
+                    tracing::error!("Failed to emit neighbors-updated event: {}", e);
+                }
+                last_network_mappings = Some(network_mappings_json);
             }
-            last_neighbors = Some(network_info_str);
+        } else {
+            tracing::error!("Failed to fetch network mappings in background service");
         }
         
         // Fetch all users
@@ -1212,8 +1222,23 @@ pub fn run() {
             crate::tauri::qaul::qaul_send_command,
             crate::tauri::qaul::get_internet_neighbours_ui_command,
             crate::tauri::qaul::get_all_neighbours_ui_command,
-            crate::tauri::user::get_all_neighbours,
+            crate::tauri::user::get_user_network_mapping,
+            crate::tauri::user::get_all_user_network_mappings,
+            crate::tauri::user::get_user_routing_info,
+            crate::tauri::user::get_user_public_key,
+            crate::tauri::user::get_online_user_mappings,
+            crate::tauri::user::get_offline_user_mappings,
+            crate::tauri::user::convert_peer_id_to_q8id,
+            crate::tauri::user::convert_q8id_to_peer_id,
             crate::tauri::qaul::get_network_stats,
+            // BLE commands
+            get_ble_info,
+            get_ble_status,
+            start_ble,
+            stop_ble,
+            get_discovered_devices,
+            request_ble_permissions,
+            send_ble_message,
             // Task commands
             crate::tauri::task::create_task,
             crate::tauri::task::get_task,

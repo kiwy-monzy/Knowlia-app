@@ -9,6 +9,7 @@ import AdvancedSettings from '@/components/settings/pages/AdvancedSettings';
 import CredentialSettings from '@/components/settings/pages/CredentialSettings';
 import AboutSettings from '@/components/settings/pages/AboutSettings';
 import NetworkSettings from '@/components/settings/pages/NetworkSettings';
+import BluetoothSettings from '@/components/settings/pages/BluetoothSettings';
 
 
 function SettingsContent() {
@@ -32,6 +33,8 @@ function SettingsContent() {
         return <CredentialSettings />;
       case 'network':
         return <NetworkSettings />;
+      case 'bluetooth':
+        return <BluetoothSettings />;
       case 'about':
         return <AboutSettings />;
       default:

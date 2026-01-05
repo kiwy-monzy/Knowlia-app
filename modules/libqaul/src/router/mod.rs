@@ -15,6 +15,7 @@ pub mod feed_requester;
 pub mod flooder;
 pub mod info;
 pub mod neighbours;
+pub mod network;
 pub mod table;
 pub mod user_requester;
 pub mod user_update;

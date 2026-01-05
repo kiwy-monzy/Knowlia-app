@@ -9,6 +9,7 @@ export type SettingsSection =
   | 'privacy' 
   | 'advanced' 
   | 'network'
+  | 'bluetooth'
   | 'about';
 
 export interface NotificationSettings {

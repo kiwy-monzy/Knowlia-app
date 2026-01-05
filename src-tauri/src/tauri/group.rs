@@ -23,7 +23,6 @@ use base64::{engine::general_purpose::STANDARD as base64, Engine};
 use hex;
 use libqaul::utilities::qaul_id::QaulId;
 use libqaul::node::user_accounts::UserAccounts;
-use crate::constants::DEFAULT_PROFILE_PIC;
 
 /// Helper function to find user data by iterating through all users (like get_all_users_info)
 fn find_user_by_peer_id(peer_id: &PeerId) -> Option<libqaul::router::users::User> {
@@ -666,7 +665,7 @@ impl From<libqaul::services::group::Group> for GroupInfo {
                                 key_base58: base.get("key_base58").and_then(|v| v.as_str()).unwrap_or("").to_string(),
                                 verified: base.get("verified").and_then(|v| v.as_bool()).unwrap_or(false),
                                 blocked: base.get("blocked").and_then(|v| v.as_bool()).unwrap_or(false),
-                                profile: base.get("profile").and_then(|v| v.as_str()).unwrap_or(DEFAULT_PROFILE_PIC).to_string(),
+                                profile: base.get("profile").and_then(|v| v.as_str()).unwrap_or("default-avatar.png").to_string(),
                                 about: base.get("about").and_then(|v| v.as_str()).unwrap_or("No bio available").to_string(),
                                 college: base.get("college").and_then(|v| v.as_str()).unwrap_or("Not specified").to_string(),
                             }
@@ -683,7 +682,7 @@ impl From<libqaul::services::group::Group> for GroupInfo {
                                 key_base58: String::new(),
                                 verified: false,
                                 blocked: false,
-                                profile: if !m.profile_pic.is_empty() { m.profile_pic.clone() } else { DEFAULT_PROFILE_PIC.to_string() },
+                                profile: if !m.profile_pic.is_empty() { m.profile_pic.clone() } else { "default-avatar.png".to_string() },
                                 about: if !m.about.is_empty() { m.about.clone() } else { "No bio available".to_string() },
                                 college: if !m.college.is_empty() { m.college.clone() } else { "Not specified".to_string() },
                             }

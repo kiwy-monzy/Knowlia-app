@@ -1,4 +1,4 @@
-import { User, Bell, Settings as SettingsIcon, Info, Wifi } from 'lucide-react';
+import { User, Bell, Settings as SettingsIcon, Info, Wifi, Bluetooth } from 'lucide-react';
 import { useSettings, SettingsSection } from '@/contexts/SettingsContext';
 import SidebarHeader from '@/components/SidebarHeader';
 
@@ -13,6 +13,7 @@ const SettingsSidebar = () => {
     //{ id: 'appearance', name: 'Appearance', icon: Palette, description: 'Theme & display' },
     //{ id: 'privacy', name: 'Privacy', icon: Shield, description: 'Security & privacy' },
     { id: 'network', name: 'Network', icon: Wifi, description: 'Network topology & peers' },
+    { id: 'bluetooth', name: 'Bluetooth', icon: Bluetooth, description: 'BLE connections & devices' },
     //{ id: 'advanced', name: 'Advanced', icon: SettingsIcon, description: 'Developer options' },
     { id: 'about', name: 'About', icon: Info, description: 'App information' },
   ];

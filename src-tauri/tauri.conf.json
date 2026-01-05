@@ -1,18 +1,38 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Knowlia",
-  "version": "1.1.1",
-  "mainBinaryName": "Knowlia",
-  "identifier": "Knowlia",
+  "productName": "knowlia",
+  "version": "1.1.2",
+  "identifier": "com.knowlia.dev",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:9401",
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Knowlia",
+        "center": true,
+        "dragDropEnabled": true,
+        "minWidth": 1200,
+        "minHeight": 850,
+        "resizable": true,
+        "minimizable": true,
+        "decorations": false,
+        "shadow": false,
+        "transparent": true,
+        "focus": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
   "bundle": {
     "active": true,
-    "copyright": "Copyright © 2026 Knowlia Education. All rights reserved.",
-    "homepage": "https://knowlia.site",
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    },
+    "targets": "all",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -20,17 +40,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "TableTop Lab",
-    "category": "Education",
-    "shortDescription": "Modern cross-platform education system for students and educators",
-    "longDescription": "Knowlia is a comprehensive education system designed for Mac, Windows, and Linux. It provides a modern, intuitive platform for managing educational content, tracking student progress, facilitating online learning, and enhancing the teaching experience. With features for course management, assignment tracking, interactive learning tools, and seamless communication between educators and students, Knowlia makes education accessible and efficient across all major operating systems.",
-    "macOS": {
-      "entitlements": null,
-      "exceptionDomain": "",
-      "frameworks": [],
-      "providerShortName": null,
-      "signingIdentity": "-"
-    },
     "resources": [
       "./assets/gdrive_data.json",
       "./assets/*",
@@ -40,55 +49,16 @@
       "./assets/cer.pem",
       "./assets/key.pem"
     ],
-    "targets": "all",
     "createUpdaterArtifacts": true
   },
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist",
-    "devUrl": "http://localhost:9401"
-  },
   "plugins": {
-    "cli": {
-      "args": [
-        {
-          "name": "file",
-          "index": 1,
-          "takesValue": true
-        }
-      ]
-    },
     "updater": {
+      "dialog": true,
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IERDQjcyRDY2MEU1M0QwOApSV1FJUGVWZzFuTExEUm4rK2V3eUNMLy9JU0JkQkxqQnBUVXdHbzdaM0w3THhaaTIyRERmeHFSNgo=",
       "endpoints": [
         "https://knowlia.site/app/latest.json",
         "https://knowlia.site/update"
-      ],
-      "dialog": true
-    }
-  },
-  "app": {
-    "withGlobalTauri": true,
-    "windows": [
-      {
-        "label": "main",
-        "title": "Knowlia",
-        "dragDropEnabled": true,
-        "center": true,
-        "minWidth": 1200,
-        "minHeight": 850,
-        "minimizable": true,
-        "backgroundColor": "#1a1a1a",
-        "transparent": false,
-        "focus": true,
-        "resizable": false,
-        "decorations": false,
-        "shadow": false
-      }
-    ],
-    "security": {
-      "csp": null
+      ]
     }
   }
 }

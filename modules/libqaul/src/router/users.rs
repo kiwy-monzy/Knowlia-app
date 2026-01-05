@@ -283,7 +283,7 @@ impl Users {
         let online_users_info = RoutingTable::get_online_users_info();
 
         // Get current user to exclude from the list
-        let _current_user_id = if let Some(account) = UserAccounts::get_default_user() {
+        let current_user_id = if let Some(account) = UserAccounts::get_default_user() {
             Some(account.id.clone())
         } else {
             None
@@ -292,11 +292,12 @@ impl Users {
         // Iterate through all users
         for (q8id, user) in all_user_profiles.iter() {
             // Skip if this is the current user
-            //if let Some(ref current_id) = current_user_id {
-            //    if user.id == *current_id {
-            //        continue;
-            //    }
-            //}
+            if let Some(ref current_id) = current_user_id {
+                if user.id == *current_id {
+                    continue;
+                }
+            }
+
             // Check if user is online by looking for connections
             let is_online = online_users_info.contains_key(q8id);
 

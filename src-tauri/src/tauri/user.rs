@@ -7,11 +7,9 @@ use libqaul::router::users::{USERS, Users};
 use libqaul::utilities::qaul_id::QaulId;
 use log::{info, warn};
 use libqaul::router;
-use libqaul::connections;
-use libp2p::PeerId;
-use serde_json::json;
+use libqaul::router::network;
 use bs58;
-use hex;
+use serde_json;
 
 /// User information structure (kept for backward compatibility)
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -36,33 +34,33 @@ pub struct UserList {
 pub async fn get_all_users() -> Result<String, String> {
     // Get all users from the users store
     let users = USERS.get().read().unwrap();
-    println!("Total users in store: {}", users.users.len());
+    info!("Total users in store: {}", users.users.len());
     
     // Get all neighbour nodes from router
     let all_nodes = router::neighbours::Neighbours::get_all_neighbours();
-    println!("Total neighbour nodes found: {}", all_nodes.len());
+    info!("Total neighbour nodes found: {}", all_nodes.len());
     
     // Get routing table entries to know all reachable users
     let routing_users = RoutingTable::get_online_users_info();
-    println!("Total users in routing table: {}", routing_users.len());
+    info!("Total users in routing table: {}", routing_users.len());
     
     // Log details of each node and its users
     for node in &all_nodes {
         let q8id = QaulId::to_q8id(node.clone());
-        println!("Node: {} -> Q8ID: {}", node.to_base58(), bs58::encode(&q8id).into_string());
+        info!("Node: {} -> Q8ID: {}", node.to_base58(), bs58::encode(&q8id).into_string());
         
         // Check if this node has a user in the users store
         if let Some(user) = users.users.get(&q8id) {
-            println!("  - User found: {} (ID: {})", user.name, user.id.to_base58());
+            info!("  - User found: {} (ID: {})", user.name, user.id.to_base58());
         } else {
-            println!("  - No user found for this node in users store");
+            info!("  - No user found for this node in users store");
         }
         
         // Check routing entries for this node
         if let Some(entries) = routing_users.get(&q8id) {
-            println!("  - Routing entries: {}", entries.len());
+            info!("  - Routing entries: {}", entries.len());
             for entry in entries {
-                println!("    - Via: {} (Module: {:?}, RTT: {}ms, Hop: {})", 
+                info!("    - Via: {} (Module: {:?}, RTT: {}ms, Hop: {})", 
                     entry.node.to_base58(), entry.module, entry.rtt, entry.hc);
             }
         }
@@ -71,7 +69,7 @@ pub async fn get_all_users() -> Result<String, String> {
     // Get all users info (existing functionality)
     match Users::get_all_users_info() {
         users_json => {
-            println!("Returning users JSON: {}", users_json);
+            info!("Returning users JSON: {}", users_json);
             Ok(users_json)
         }
     }
@@ -164,127 +162,77 @@ pub async fn set_node_profile_tauri(name: String, college: String, reg_no: Strin
 
 
 
-/// Return a JSON object summarising all neighbours grouped by connection module.
-/// This is a helper for the UI layer and is **not** exposed as a Tauri command
-/// because it performs no I/O and cannot fail.
-/// Return a JSON object summarising all neighbours grouped by connection module.
-/// This also maps PeerIds to Usernames from the libqaul profile store.
+/// Get network mapping for a specific user by peer ID
 #[tauri::command]
-pub fn get_all_neighbours() -> serde_json::Value {
-    let users = USERS.get().read().unwrap();
-    let mut lan_neighbours = Vec::new();
-    let mut ble_neighbours = Vec::new();
-    let mut internet_neighbours = Vec::new();
-
-    // Get all direct neighbours from the neighbours module
-    let all_nodes = router::neighbours::Neighbours::get_all_neighbours();
-    
-    // Helper function to get user profile and a proper display name
-    let get_user_profile = |peer_id: &PeerId| -> (serde_json::Value, String) {
-        let q8id = QaulId::to_q8id(peer_id.clone());
-        let peer_id_hex = hex::encode(peer_id.to_bytes());
-        let peer_id_b58 = peer_id.to_base58();
-        let shortened_id = if peer_id_b58.len() > 8 {
-            format!("Node-{}", &peer_id_b58[..6])
-        } else {
-            peer_id_b58.clone()
-        };
-
-        if let Some(user) = users.users.get(&q8id) {
-            let name = if user.name.is_empty() { 
-                // Request info in background if name is empty
-                info!("Requesting missing user info for {}", peer_id.to_base58());
-                libqaul::router::users::Users::request_user_info(peer_id);
-                shortened_id.clone() 
-            } else { 
-                user.name.clone() 
-            };
-            (json!({
-                "name": name,
-                "profile": user.profile_pic.as_deref().unwrap_or(""),
-                "about": user.about.as_deref().unwrap_or(""),
-                "college": user.college.as_deref().unwrap_or(""),
-                "reg_no": user.reg_no.as_deref().unwrap_or(""),
-                "verified": user.verified,
-                "blocked": user.blocked,
-                "q8id": bs58::encode(&q8id).into_string(),
-                "id": peer_id_hex,
-                "key_base58": bs58::encode(peer_id.to_bytes()).into_string(),
-                "is_online": true,
-            }), name)
-        } else {
-            // New unknown user, request info
-            info!("Unknown user detected, requesting info for {}", peer_id.to_base58());
-            libqaul::router::users::Users::request_user_info(peer_id);
-            
-            (json!({
-                "name": shortened_id.clone(),
-                "profile": "",
-                "about": "",
-                "college": "",
-                "reg_no": "",
-                "verified": false,
-                "blocked": false,
-                "q8id": bs58::encode(q8id).into_string(),
-                "id": peer_id_hex,
-                "key_base58": bs58::encode(peer_id.to_bytes()).into_string(),
-                "is_online": true,
-            }), shortened_id)
-        }
-    };
-
-    // Helper to format RTT from microseconds to fractional milliseconds
-    let format_rtt = |rtt_micros: Option<u32>| -> f64 {
-        rtt_micros.map(|r| r as f64 / 1000.0).unwrap_or(0.0)
-    };
-
-    for peer_id in all_nodes {
-        let connection_module = router::neighbours::Neighbours::is_neighbour(&peer_id);
-        let rtt = router::neighbours::Neighbours::get_rtt(&peer_id, &connection_module);
-        let rtt_ms = format_rtt(rtt);
-        let (user_profile, display_name) = get_user_profile(&peer_id);
-        
-        let node_data = json!({
-            "node_id": peer_id.to_bytes(),
-            "peer_id": peer_id.to_base58(),
-            "rtt": rtt_ms,
-            "name": display_name,
-            "user_name": display_name,
-            "connection_type": match connection_module {
-                connections::ConnectionModule::Lan => "lan",
-                connections::ConnectionModule::Ble => "ble",
-                connections::ConnectionModule::Internet => "internet",
-                _ => "unknown"
-            },
-            "user": user_profile,
-            "online": true
-        });
-
-        match connection_module {
-            connections::ConnectionModule::Lan => lan_neighbours.push(node_data),
-            connections::ConnectionModule::Ble => ble_neighbours.push(node_data),
-            connections::ConnectionModule::Internet => {
-                let (address, config_name, _) = connections::internet::Internet::get_peer_info(&peer_id);
-                let mut final_node_data = node_data;
-                // For internet nodes, prefer the configuration name if found
-                if let Some(cname) = config_name {
-                    final_node_data["name"] = json!(cname);
-                }
-                if let Some(addr) = address {
-                    final_node_data["address"] = json!(addr);
-                }
-                internet_neighbours.push(final_node_data);
-            },
-            _ => {}
-        }
+pub async fn get_user_network_mapping(peer_id: String) -> Result<String, String> {
+    match network::get_user_mapping(&peer_id) {
+        Some(mapping) => Ok(serde_json::to_string(&mapping).unwrap()),
+        None => Err(format!("User not found for peer ID: {}", peer_id))
     }
+}
 
-    json!({
-        "lan": lan_neighbours,
-        "ble": ble_neighbours,
-        "internet": internet_neighbours,
-        "total_count": lan_neighbours.len() + ble_neighbours.len() + internet_neighbours.len()
-    })
+/// Get network mapping for all users
+#[tauri::command]
+pub async fn get_all_user_network_mappings() -> Result<String, String> {
+    let mappings = network::get_all_user_mappings();
+    Ok(serde_json::to_string(&mappings).unwrap())
+}
+
+/// Get routing information for a specific user
+#[tauri::command]
+pub async fn get_user_routing_info(peer_id: String) -> Result<String, String> {
+    match network::get_user_routing(&peer_id) {
+        Some(routing) => Ok(serde_json::json!({
+            "peer_id": peer_id,
+            "via_node": bs58::encode(routing.node.to_bytes()).into_string(),
+            "module": routing.module.as_int(),
+            "hop_count": routing.hc,
+            "rtt": routing.rtt,
+            "link_quality": routing.lq
+        }).to_string()),
+        None => Err(format!("No routing information found for peer ID: {}", peer_id))
+    }
+}
+
+/// Get public key for a user by peer ID
+#[tauri::command]
+pub async fn get_user_public_key(peer_id: String) -> Result<String, String> {
+    match network::get_user_public_key(&peer_id) {
+        Some(key) => Ok(key),
+        None => Err(format!("Public key not found for peer ID: {}", peer_id))
+    }
+}
+
+/// Get online users with network mapping
+#[tauri::command]
+pub async fn get_online_user_mappings() -> Result<String, String> {
+    let mappings = network::get_online_users();
+    Ok(serde_json::to_string(&mappings).unwrap())
+}
+
+/// Get offline users with network mapping
+#[tauri::command]
+pub async fn get_offline_user_mappings() -> Result<String, String> {
+    let mappings = network::get_offline_users();
+    Ok(serde_json::to_string(&mappings).unwrap())
+}
+
+/// Convert peer ID to q8id
+#[tauri::command]
+pub async fn convert_peer_id_to_q8id(peer_id: String) -> Result<String, String> {
+    match network::peer_id_to_q8id(&peer_id) {
+        Some(q8id) => Ok(q8id),
+        None => Err(format!("Invalid peer ID: {}", peer_id))
+    }
+}
+
+/// Convert q8id to peer ID
+#[tauri::command]
+pub async fn convert_q8id_to_peer_id(q8id: String) -> Result<String, String> {
+    match network::q8id_to_peer_id(&q8id) {
+        Some(peer_id) => Ok(peer_id),
+        None => Err(format!("Invalid q8id: {}", q8id))
+    }
 }
 
 /// Register user-related Tauri commands
@@ -296,7 +244,14 @@ pub fn register_commands<R: Runtime>() -> TauriPlugin<R> {
             get_offline_users,
             user_profile,
             set_node_profile_tauri,
-            get_all_neighbours,
+            get_user_network_mapping,
+            get_all_user_network_mappings,
+            get_user_routing_info,
+            get_user_public_key,
+            get_online_user_mappings,
+            get_offline_user_mappings,
+            convert_peer_id_to_q8id,
+            convert_q8id_to_peer_id,
         ])
         .build()
 }

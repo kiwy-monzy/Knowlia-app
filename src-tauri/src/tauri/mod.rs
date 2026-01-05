@@ -14,3 +14,4 @@ pub mod timetable;
 pub mod mega;
 pub mod zotero;
 pub mod task;
+pub mod ble;

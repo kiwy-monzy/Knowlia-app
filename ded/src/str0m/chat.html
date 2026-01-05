@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Chat Enhanced</title>
+    <style>
+        body {
+            background: black;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        .user-media {
+            border: 2px solid #333;
+            margin: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            display: inline-block;
+            vertical-align: top;
+        }
+        
+        .user-name {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+        
+        .no-video {
+            width: 320px;
+            height: 240px;
+            background: #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 18px;
+            border-radius: 4px;
+        }
+        
+        video {
+            border-radius: 4px;
+        }
+        
+        .status {
+            margin: 10px 0;
+        }
+        
+        .user-list {
+            margin: 20px 0;
+            padding: 10px;
+            background: #222;
+            border-radius: 4px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .disconnect-btn {
+            background: #f44336;
+            font-size: 12px;
+            padding: 4px 8px;
+        }
+        
+        .media-controls {
+            display: flex;
+            gap: 5px;
+            margin-top: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .control-btn {
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 3px;
+            border: none;
+            cursor: pointer;
+            color: white;
+            min-width: 50px;
+        }
+        
+        .control-btn.active {
+            background: #4CAF50;
+        }
+        
+        .control-btn.inactive {
+            background: #f44336;
+        }
+        
+        .control-btn.disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .keyboard-hint {
+            font-size: 10px;
+            color: #888;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>WebRTC Enhanced Chat</h2>
+    
+    <div class="controls">
+        <input type="text" id="username" placeholder="Enter your name" value="User">
+        <button id="rtc" onClick="startRtc()">Connect</button>
+        <button id="cam" onClick="startCam()" disabled>Share Screen/Video</button>
+        <button id="mic" onClick="startMic()" disabled>Microphone</button>
+    </div>
+    
+    <div class="status">
+        ICE: <span id="ice_status">new</span> | 
+        <span id="chan_status">Waiting for data channel.</span>
+    </div>
+    
+    <div class="user-list">
+        <strong>Connected Users:</strong>
+        <div id="user_count">0 users</div>
+    </div>
+    
+    <div id="media_container"></div>
+
+    <div class="keyboard-hint">
+        <strong>Keyboard Shortcuts:</strong> V = Toggle Video | A = Toggle Audio | M = Mute All | U = Unmute All | Numbers 1-9 = Control specific user
+    </div>
+
+    <script>
+        // State management
+        let streamCam;
+        let streamMic;
+        let dataChannel;
+        let rtc = new RTCPeerConnection();
+        let localUsername = 'User';
+        let userStates = new Map(); // userId -> {name, videoTrack, audioTrack, hasVideo}
+        let localTracks = new Map(); // trackId -> track info
+        let userOrder = []; // Track user order for keyboard shortcuts
+        let selectedUser = null; // Currently selected user for keyboard controls
+        
+        // Helper functions
+        const byId = (id) => document.getElementById(id);
+        const generateUserId = () => 'user_' + Math.random().toString(36).substr(2, 9);
+        const localUserId = generateUserId();
+        
+        // Track user state
+        function updateUserState(userId, updates) {
+            if (!userStates.has(userId)) {
+                userStates.set(userId, {
+                    name: 'Unknown User',
+                    videoTrack: null,
+                    audioTrack: null,
+                    hasVideo: false,
+                    element: null,
+                    videoEnabled: true,
+                    audioEnabled: true,
+                    videoElement: null,
+                    audioElement: null
+                });
+                // Add to user order for keyboard shortcuts
+                if (!userOrder.includes(userId)) {
+                    userOrder.push(userId);
+                }
+            }
+            
+            const state = userStates.get(userId);
+            Object.assign(state, updates);
+            userStates.set(userId, state);
+            
+            updateUserDisplay(userId);
+            updateUserCount();
+        }
+        
+        function updateUserCount() {
+            const count = userStates.size;
+            byId('user_count').textContent = `${count} user${count !== 1 ? 's' : ''}`;
+        }
+        
+        function toggleUserVideo(userId) {
+            const state = userStates.get(userId);
+            if (!state || !state.videoElement) return;
+            
+            state.videoEnabled = !state.videoEnabled;
+            state.videoElement.style.display = state.videoEnabled ? 'block' : 'none';
+            
+            // Update button state
+            const videoBtn = state.element.querySelector('.video-toggle');
+            if (videoBtn) {
+                videoBtn.className = `control-btn video-toggle ${state.videoEnabled ? 'active' : 'inactive'}`;
+                videoBtn.textContent = `📹 ${state.videoEnabled ? 'ON' : 'OFF'}`;
+            }
+        }
+        
+        function toggleUserAudio(userId) {
+            const state = userStates.get(userId);
+            if (!state) return;
+            
+            state.audioEnabled = !state.audioEnabled;
+            
+            // Mute/unmute video audio
+            if (state.videoElement) {
+                state.videoElement.muted = !state.audioEnabled || userId === localUserId;
+            }
+            
+            // Mute/unmute audio element
+            if (state.audioElement) {
+                state.audioElement.muted = !state.audioEnabled;
+            }
+            
+            // Update button state
+            const audioBtn = state.element.querySelector('.audio-toggle');
+            if (audioBtn) {
+                audioBtn.className = `control-btn audio-toggle ${state.audioEnabled ? 'active' : 'inactive'}`;
+                audioBtn.textContent = `🔊 ${state.audioEnabled ? 'ON' : 'OFF'}`;
+            }
+        }
+        
+        function updateUserDisplay(userId) {
+            const state = userStates.get(userId);
+            if (!state) return;
+            
+            // Remove existing element if exists
+            if (state.element) {
+                state.element.remove();
+                state.element = null;
+            }
+            
+            // Create user container
+            const userDiv = document.createElement('div');
+            userDiv.className = 'user-media';
+            userDiv.id = `user-${userId}`;
+            userDiv.setAttribute('data-user-id', userId);
+            
+            // Add selection highlight for keyboard control
+            const userIndex = userOrder.indexOf(userId) + 1;
+            
+            // User name header
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'user-name';
+            nameDiv.textContent = `${state.name} [${userIndex}]`;
+            
+            // Add disconnect button for remote users
+            if (userId !== localUserId) {
+                const disconnectBtn = document.createElement('button');
+                disconnectBtn.className = 'disconnect-btn';
+                disconnectBtn.textContent = 'Kick';
+                disconnectBtn.onclick = () => kickUser(userId);
+                nameDiv.appendChild(disconnectBtn);
+            }
+            
+            userDiv.appendChild(nameDiv);
+            
+            // Create media stream
+            const mediaStream = new MediaStream();
+            let hasAnyTrack = false;
+            
+            if (state.videoTrack && state.videoTrack.readyState === 'live') {
+                mediaStream.addTrack(state.videoTrack);
+                hasAnyTrack = true;
+            }
+            
+            if (state.audioTrack && state.audioTrack.readyState === 'live') {
+                mediaStream.addTrack(state.audioTrack);
+                hasAnyTrack = true;
+            }
+            
+            if (hasAnyTrack && state.videoTrack) {
+                // Create video element
+                const video = document.createElement('video');
+                video.width = 320;
+                video.height = 240;
+                video.controls = false; // Disable default controls, we'll add custom ones
+                video.autoplay = true;
+                video.muted = true; // Always muted by default
+                video.srcObject = mediaStream;
+                userDiv.appendChild(video);
+                state.videoElement = video;
+                state.hasVideo = true;
+            } else if (state.audioTrack && state.audioTrack.readyState === 'live') {
+                // Audio only - show "NO VIDEO" placeholder
+                const noVideo = document.createElement('div');
+                noVideo.className = 'no-video';
+                noVideo.textContent = 'NO VIDEO';
+                userDiv.appendChild(noVideo);
+                state.hasVideo = false;
+            }
+            
+            // Create separate audio element for audio control
+            if (state.audioTrack && state.audioTrack.readyState === 'live') {
+                const audioStream = new MediaStream();
+                audioStream.addTrack(state.audioTrack);
+                
+                const audio = document.createElement('audio');
+                audio.autoplay = true;
+                audio.muted = true; // Start muted
+                audio.srcObject = audioStream;
+                audio.style.display = 'none'; // Hidden audio element
+                userDiv.appendChild(audio);
+                state.audioElement = audio;
+            }
+            
+            // Create control buttons
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'media-controls';
+            
+            // Video toggle button
+            if (state.videoElement || state.hasVideo) {
+                const videoBtn = document.createElement('button');
+                videoBtn.className = `control-btn video-toggle ${state.videoEnabled ? 'active' : 'inactive'}`;
+                videoBtn.textContent = `📹 ${state.videoEnabled ? 'ON' : 'OFF'}`;
+                videoBtn.onclick = () => toggleUserVideo(userId);
+                controlsDiv.appendChild(videoBtn);
+            }
+            
+            // Audio toggle button
+            if (state.audioTrack) {
+                const audioBtn = document.createElement('button');
+                audioBtn.className = `control-btn audio-toggle ${state.audioEnabled ? 'active' : 'inactive'}`;
+                audioBtn.textContent = `🔊 ${state.audioEnabled ? 'ON' : 'OFF'}`;
+                audioBtn.onclick = () => toggleUserAudio(userId);
+                controlsDiv.appendChild(audioBtn);
+            }
+            
+            // Fullscreen button (for video)
+            if (state.videoElement) {
+                const fullscreenBtn = document.createElement('button');
+                fullscreenBtn.className = 'control-btn';
+                fullscreenBtn.style.background = '#2196F3';
+                fullscreenBtn.textContent = '⛶ Full';
+                fullscreenBtn.onclick = () => {
+                    if (state.videoElement.requestFullscreen) {
+                        state.videoElement.requestFullscreen();
+                    }
+                };
+                controlsDiv.appendChild(fullscreenBtn);
+            }
+            
+            if (controlsDiv.children.length > 0) {
+                userDiv.appendChild(controlsDiv);
+            }
+            
+            // Show no media message if no tracks
+            if (!hasAnyTrack) {
+                const noVideo = document.createElement('div');
+                noVideo.className = 'no-video';
+                noVideo.textContent = 'NO MEDIA';
+                userDiv.appendChild(noVideo);
+                state.hasVideo = false;
+            }
+            
+            byId('media_container').appendChild(userDiv);
+            state.element = userDiv;
+            
+            // Apply current states
+            if (state.videoElement && !state.videoEnabled) {
+                state.videoElement.style.display = 'none';
+            }
+        }
+        
+        function removeUser(userId) {
+            const state = userStates.get(userId);
+            if (state && state.element) {
+                state.element.remove();
+            }
+            userStates.delete(userId);
+            
+            // Remove from user order
+            const index = userOrder.indexOf(userId);
+            if (index > -1) {
+                userOrder.splice(index, 1);
+            }
+            
+            // Update display for remaining users (to update numbering)
+            userStates.forEach((state, id) => {
+                updateUserDisplay(id);
+            });
+            
+            updateUserCount();
+        }
+        
+        function kickUser(userId) {
+            // Send kick message through data channel
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({
+                    type: 'kick',
+                    userId: userId
+                }));
+            }
+            removeUser(userId);
+        }
+        
+        function handleDisconnection() {
+            // Stop all local tracks
+            if (streamCam) {
+                streamCam.getTracks().forEach(track => track.stop());
+                streamCam = null;
+            }
+            if (streamMic) {
+                streamMic.getTracks().forEach(track => track.stop());
+                streamMic = null;
+            }
+            
+            // Clear user states
+            userStates.clear();
+            localTracks.clear();
+            userOrder = [];
+            selectedUser = null;
+            byId('media_container').innerHTML = '';
+            
+            // Reset UI
+            rtc.close();
+            byId('rtc').disabled = false;
+            byId('cam').disabled = true;
+            byId('mic').disabled = true;
+            byId('chan_status').textContent = 'Disconnected';
+            updateUserCount();
+        }
+        
+        rtc.ontrack = (event) => {
+            const track = event.track;
+            const streams = event.streams;
+            
+            console.log('Received track:', track.kind, track.id);
+            
+            // Extract user info from stream (you might want to enhance this)
+            const streamId = streams[0]?.id || 'unknown';
+            const userId = `remote_${streamId.substring(0, 8)}`;
+            
+            // Handle track by type
+            if (track.kind === 'video') {
+                updateUserState(userId, {
+                    name: `Remote User (${userId.substring(7, 12)})`,
+                    videoTrack: track
+                });
+            } else if (track.kind === 'audio') {
+                updateUserState(userId, {
+                    audioTrack: track
+                });
+            }
+            
+            // Handle track ended
+            track.addEventListener('ended', () => {
+                console.log('Track ended:', track.kind, track.id);
+                const state = userStates.get(userId);
+                if (state) {
+                    if (track.kind === 'video') {
+                        state.videoTrack = null;
+                    } else if (track.kind === 'audio') {
+                        state.audioTrack = null;
+                    }
+                    
+                    // Remove user if no tracks left
+                    if (!state.videoTrack && !state.audioTrack) {
+                        removeUser(userId);
+                    } else {
+                        updateUserDisplay(userId);
+                    }
+                }
+            });
+        };
+        
+        var callback = null;
+        
+        async function negotiate() {
+            const offer = await rtc.createOffer();
+            console.log('Creating offer');
+            rtc.setLocalDescription(offer);
+            await dataChannel.send(JSON.stringify(offer));
+            
+            const json = await new Promise((resolve) => {
+                callback = resolve;
+            });
+            
+            const answer = JSON.parse(json);
+            console.log('Received answer');
+            rtc.setRemoteDescription(answer);
+        }
+        
+        async function handleOffer(json) {
+            const offer = JSON.parse(json);
+            console.log('Handling offer');
+            rtc.setRemoteDescription(offer);
+            
+            const answer = await rtc.createAnswer();
+            console.log('Creating answer');
+            rtc.setLocalDescription(answer);
+            await dataChannel.send(JSON.stringify(answer));
+        }
+        
+        async function startCam() {
+            byId('cam').disabled = true;
+            localUsername = byId('username').value || 'User';
+            
+            try {
+                streamCam = await navigator.mediaDevices.getDisplayMedia({
+                    video: {
+                        width: 640,
+                        height: 360,
+                    },
+                    audio: true
+                });
+                
+                const hasAudio = streamCam.getAudioTracks().length > 0;
+                if (!hasAudio) {
+                    alert("Screen share audio is not available.\n\nTo enable audio, use Chrome or Edge, select 'Entire Screen' or a browser tab, and check the 'Share system audio' box in the screen share dialog.");
+                }
+            } catch (err) {
+                console.error('Screen share failed:', err);
+                try {
+                    // Fallback to camera
+                    streamCam = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 640, height: 360 },
+                        audio: true
+                    });
+                } catch (fallbackErr) {
+                    alert("No camera or screen share available.");
+                    byId('cam').disabled = false;
+                    return;
+                }
+            }
+            
+            // Add tracks and update local user display
+            const videoTrack = streamCam.getVideoTracks()[0];
+            const audioTrack = streamCam.getAudioTracks()[0];
+            
+            streamCam.getTracks().forEach(track => {
+                rtc.addTransceiver(track, {
+                    direction: "sendonly",
+                    streams: [streamCam],
+                });
+                localTracks.set(track.id, {track, type: track.kind});
+            });
+            
+            // Update local user display
+            updateUserState(localUserId, {
+                name: `${localUsername} (You)`,
+                videoTrack: videoTrack,
+                audioTrack: audioTrack
+            });
+            
+            await negotiate();
+        }
+        
+        async function startMic() {
+            byId('mic').disabled = true;
+            localUsername = byId('username').value || 'User';
+            
+            try {
+                streamMic = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                });
+                
+                const audioTrack = streamMic.getTracks()[0];
+                rtc.addTransceiver(audioTrack, {
+                    streams: [streamMic],
+                    direction: "sendonly"
+                });
+                
+                localTracks.set(audioTrack.id, {track: audioTrack, type: 'audio'});
+                
+                // Update local user display
+                updateUserState(localUserId, {
+                    name: `${localUsername} (You)`,
+                    audioTrack: audioTrack
+                });
+                
+                await negotiate();
+            } catch (e) {
+                console.error('Microphone access failed:', e);
+                alert("Error accessing microphone: " + e.message);
+                byId('mic').disabled = false;
+            }
+        }
+        
+        async function startRtc() {
+            byId('rtc').disabled = true;
+            localUsername = byId('username').value || 'User';
+            
+            // Configure ICE servers
+            rtc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' }
+                ]
+            });
+            
+            // Set up ICE connection state monitoring
+            rtc.oniceconnectionstatechange = () => {
+                byId('ice_status').innerText = rtc.iceConnectionState;
+                console.log('ICE connection state:', rtc.iceConnectionState);
+                
+                if (rtc.iceConnectionState === 'disconnected' || rtc.iceConnectionState === 'failed') {
+                    handleDisconnection();
+                }
+            };
+            
+            // Set up ICE candidate handling
+            rtc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log('New ICE candidate:', event.candidate);
+                } else {
+                    console.log('ICE gathering complete');
+                }
+            };
+            
+            dataChannel = rtc.createDataChannel("offer/answer");
+            
+            dataChannel.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                if (data.type === 'offer') {
+                    handleOffer(event.data);
+                } else if (data.type === 'answer') {
+                    if (callback) {
+                        callback(event.data);
+                        callback = null;
+                    }
+                } else if (data.type === 'kick' && data.userId) {
+                    removeUser(data.userId);
+                } else if (data.type === 'user_info') {
+                    // Handle user information updates
+                    updateUserState(data.userId, {name: data.name});
+                }
+            };
+            
+            dataChannel.onopen = () => {
+                byId('chan_status').innerText = 'Connected';
+                byId('mic').disabled = false;
+                byId('cam').disabled = false;
+                
+                // Send user info
+                dataChannel.send(JSON.stringify({
+                    type: 'user_info',
+                    userId: localUserId,
+                    name: localUsername
+                }));
+            };
+            
+            dataChannel.onclose = () => {
+                byId('chan_status').innerText = 'Data channel closed';
+            };
+            
+            const offer = await rtc.createOffer();
+            rtc.setLocalDescription(offer);
+            console.log('Connecting...');
+            
+            try {
+                const res = await fetch('/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(offer),
+                });
+                
+                const answer = await res.json();
+                await rtc.setRemoteDescription(answer);
+                console.log('Connection established');
+                
+                // Wait for ICE connection to complete
+                await new Promise((resolve, reject) => {
+                    const timeout = setTimeout(() => {
+                        reject(new Error('ICE connection timeout'));
+                    }, 10000); // 10 second timeout
+                    
+                    const checkConnection = () => {
+                        if (rtc.iceConnectionState === 'connected' || rtc.iceConnectionState === 'completed') {
+                            clearTimeout(timeout);
+                            resolve();
+                        } else if (rtc.iceConnectionState === 'failed' || rtc.iceConnectionState === 'disconnected') {
+                            clearTimeout(timeout);
+                            reject(new Error('ICE connection failed'));
+                        } else {
+                            setTimeout(checkConnection, 100);
+                        }
+                    };
+                    
+                    checkConnection();
+                });
+                
+                console.log('ICE connection established, data channel should open soon');
+                
+            } catch (error) {
+                console.error('Connection failed:', error);
+                byId('chan_status').textContent = 'Connection failed: ' + error.message;
+                byId('rtc').disabled = false;
+                handleDisconnection();
+            }
+        }
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            if (dataChannel && dataChannel.readyState === 'open') {
+                dataChannel.send(JSON.stringify({
+                    type: 'user_leaving',
+                    userId: localUserId
+                }));
+            }
+            handleDisconnection();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            // Don't trigger shortcuts if user is typing in input field
+            if (event.target.tagName === 'INPUT') return;
+            
+            const key = event.key.toLowerCase();
+            
+            // Global shortcuts
+            if (key === 'm') {
+                // Mute all audio
+                event.preventDefault();
+                userStates.forEach((state, userId) => {
+                    if (state.audioEnabled) {
+                        toggleUserAudio(userId);
+                    }
+                });
+            } else if (key === 'u') {
+                // Unmute all audio
+                event.preventDefault();
+                userStates.forEach((state, userId) => {
+                    if (!state.audioEnabled) {
+                        toggleUserAudio(userId);
+                    }
+                });
+            } else if (key === 'v' && selectedUser) {
+                // Toggle video for selected user
+                event.preventDefault();
+                toggleUserVideo(selectedUser);
+            } else if (key === 'a' && selectedUser) {
+                // Toggle audio for selected user
+                event.preventDefault();
+                toggleUserAudio(selectedUser);
+            } else if (/^[1-9]$/.test(key)) {
+                // Select user by number
+                event.preventDefault();
+                const userIndex = parseInt(key) - 1;
+                if (userIndex < userOrder.length) {
+                    selectedUser = userOrder[userIndex];
+                    
+                    // Highlight selected user
+                    document.querySelectorAll('.user-media').forEach(el => {
+                        el.style.border = '2px solid #333';
+                    });
+                    
+                    const selectedElement = document.querySelector(`[data-user-id="${selectedUser}"]`);
+                    if (selectedElement) {
+                        selectedElement.style.border = '2px solid #4CAF50';
+                        selectedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }
+            } else if (key === 'escape') {
+                // Clear selection
+                event.preventDefault();
+                selectedUser = null;
+                document.querySelectorAll('.user-media').forEach(el => {
+                    el.style.border = '2px solid #333';
+                });
+            }
+        });
+        
+    </script>
+</body>
+
+</html>

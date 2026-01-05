@@ -1,11 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Info, Download, ExternalLink, Github, Heart, RefreshCw, Zap } from 'lucide-react';
-import { toast } from 'sonner';
-import { MeshGradient } from "@paper-design/shaders-react";
-
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Info, Download, ExternalLink, Github, Heart, RefreshCw, Zap, Package, Calendar, Code, Shield } from 'lucide-react';
+import { toast } from 'sonner';
 import { check, type DownloadEvent } from '@tauri-apps/plugin-updater';
 import { exit, relaunch } from '@tauri-apps/plugin-process';
 import packageJson from '../../../../package.json';
@@ -28,7 +24,6 @@ const AboutSettings = () => {
     setIsChecking(true);
     try {
       const update = await check();
-      //console.log(update);
       if (update) {
         setUpdateInfo({
           version: update.version,
@@ -51,238 +46,268 @@ const AboutSettings = () => {
         toast.success('You are running the latest version');
       }
     } catch (error) {
-      //console.error('Update check failed:', error);
       toast.error('Failed to check for updates');
     } finally {
       setIsChecking(false);
     }
   };
 
-const handleUpdate = async (updateInfo: {
-  version: string;
-  date?: string;
-  body?: string;
-} | null) => {
-  if (!updateInfo) return;
-  
-  const update = await check();
-  if (!update) return;
-  
-  // Show initial download toast and store the toast ID
-  const toastId = toast.loading('Preparing update...');
-  
-  try {
-    //console.log(`Found update ${update.version} from ${update.date} with notes: ${update.body}`);
+  const handleUpdate = async (updateInfo: {
+    version: string;
+    date?: string;
+    body?: string;
+  } | null) => {
+    if (!updateInfo) return;
     
-    // Download and install the update
-    await update.downloadAndInstall((event: DownloadEvent) => {
-      switch (event.event) {
-        case 'Started':
-          toast.loading('Starting download...', { id: toastId });
-          break;
-          
-        case 'Progress':
-          toast.loading('Downloading update...', { 
-            id: toastId 
-          });
-          break;
-          
-        case 'Finished':
-          toast.loading('Installing update...', { id: toastId });
-          break;
-      }
-    });
+    const update = await check();
+    if (!update) return;
     
-    // If we get here, installation was successful
-    toast.success('Update installed! Restarting application...', { id: toastId });
+    // Show initial download toast and store the toast ID
+    const toastId = toast.loading('Preparing update...');
     
-    // Give a small delay to show the success message before restarting
-    setTimeout(() => {
-      relaunch();
-    }, 1000);
-    
-  } catch (error) {
-    console.error('Update failed:', error);
-    toast.error(`Update failed: ${error instanceof Error ? error.message : String(error)}`, { 
-      id: toastId 
-    });
-  }
-};
+    try {
+      // Download and install the update
+      await update.downloadAndInstall((event: DownloadEvent) => {
+        switch (event.event) {
+          case 'Started':
+            toast.loading('Starting download...', { id: toastId });
+            break;
+            
+          case 'Progress':
+            toast.loading('Downloading update...', { 
+              id: toastId 
+            });
+            break;
+            
+          case 'Finished':
+            toast.loading('Installing update...', { id: toastId });
+            break;
+        }
+      });
+      
+      // If we get here, installation was successful
+      toast.success('Update installed! Restarting application...', { id: toastId });
+      
+      // Give a small delay to show the success message before restarting
+      setTimeout(() => {
+        relaunch();
+      }, 2000);
+    } catch (error) {
+      console.error('Update failed:', error);
+      toast.error(`Update failed: ${error instanceof Error ? error.message : String(error)}`, { 
+        id: toastId 
+      });
+    }
+  };
 
   return (
-    <div className="p-6 pb-20 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">About {appName}</h1>
-        <p className="text-muted-foreground">
-          Version {appVersion} • Built on {new Date(buildDate).toLocaleDateString()}
-        </p>
+    <div className="p-6 pb-18 space-y-6 bg-white min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">About {appName}</h2>
+          <p className="text-gray-600 mt-1">Application information and updates</p>
+        </div>
+        <button
+          onClick={checkForUpdates}
+          disabled={isChecking}
+          className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-blue-600 ${isChecking ? 'animate-spin' : ''}`} />
+          <span className="text-sm font-medium text-blue-700">
+            {isChecking ? 'Checking...' : 'Check Updates'}
+          </span>
+        </button>
       </div>
 
-      <Card className="relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
-          <MeshGradient
-            speed={0.5}
-            colors={["#FFFFFF", "#F8FAFC", "#F1F5F9", "#E2E8F0"]}
-            distortion={0.4}
-            swirl={0.05}
-            grainMixer={0}
-            grainOverlay={0}
-            className="inset-0 sticky top-0"
-            style={{ height: "100%", width: "100%" }}
-          />
-        </div>
-        <div className="relative z-10">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Info className="h-5 w-5" />
-              Application Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Application</p>
-              <p>{appName}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-muted-foreground">Version</p>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="font-mono">v{appVersion}</Badge>
-                {updateInfo && (
-                  <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
-                    v{updateInfo.version} available
-                  </Badge>
-                )}
-              </div>
-            </div>
-          </div>
-
+      {/* Application Information Card */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <Package className="w-5 h-5 text-blue-600" />
+            <span>Application Information</span>
+          </h3>
           {updateInfo && (
-            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800">
-              <h3 className="font-medium text-blue-800 dark:text-blue-200">Update Available</h3>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                Version {updateInfo.version} • {updateInfo.date && new Date(updateInfo.date).toLocaleDateString()}
-              </p>
-              {updateInfo.body && (
-                <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded text-sm text-gray-700 dark:text-gray-300">
-                  {updateInfo.body}
-                </div>
-              )}
-              <Button 
-                size="sm" 
-                className="mt-3 bg-blue-600 hover:bg-blue-700"
-                onClick={() => updateInfo && handleUpdate(updateInfo)}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Install Update
-              </Button>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="text-sm text-green-600 font-medium">Update Available</span>
             </div>
           )}
-
-          <div className="flex gap-3 pt-4">
-            <Button 
-              variant="outline" 
-              onClick={checkForUpdates}
-              disabled={isChecking}
-            >
-              {isChecking ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Checking...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Check for Updates
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
         </div>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Heart className="h-5 w-5 text-pink-500" fill="currentColor" />
-            About KlassKall
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="prose dark:prose-invert max-w-none">
-            <p>
-              KlassKall is the powerful decentralized networking engine that powers Knowlia, 
-              enabling secure, private communication without relying on internet infrastructure.
-            </p>
-            <div className="mt-4 space-y-4">
-              <div className="p-4 bg-muted/20 rounded-lg">
-                <h4 className="font-medium text-foreground">Core Features</h4>
-                <ul className="list-disc pl-5 space-y-1 mt-2">
-                  <li><span className="font-medium">Peer-to-Peer Mesh:</span> Direct device-to-device connections without central servers</li>
-                  <li><span className="font-medium">End-to-End Encryption:</span> All communications are secured with military-grade encryption</li>
-                  <li><span className="font-medium">Offline-First:</span> Works without internet via Wi-Fi Direct, Bluetooth, or local networks</li>
-                  <li><span className="font-medium">Self-Healing Network:</span> Automatically routes around network disruptions</li>
-                  <li><span className="font-medium">Zero Configuration:</span> Automatically discovers nearby devices</li>
-                </ul>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">Application Name</p>
+              <p className="font-medium text-gray-900">{appName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Current Version</p>
+              <p className="font-mono font-medium text-gray-900">v{appVersion}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Build Date</p>
+              <p className="font-medium text-gray-900">{new Date(buildDate).toLocaleDateString()}</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">Platform</p>
+              <p className="font-medium text-gray-900">{navigator.platform}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Architecture</p>
+              <p className="font-medium text-gray-900">{navigator.userAgent.includes('x64') ? 'x64' : 'Unknown'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Status</p>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <p className="font-medium text-green-600">Running</p>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-              <div className="p-4 bg-muted/20 rounded-lg">
-                <h4 className="font-medium text-foreground">How It Works</h4>
-                <p className="text-sm mt-1">
-                  KlassKall creates a decentralized mesh network where each device acts as both a client and a router, 
-                  relaying messages for other devices to extend the network's reach. Messages are encrypted 
-                  and routed through the most efficient path available.
+      {/* Update Information Card */}
+      {updateInfo && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-green-900 flex items-center space-x-2">
+              <Download className="w-5 h-5 text-green-600" />
+              <span>Update Available</span>
+            </h3>
+            <span className="text-sm font-medium text-green-700">v{updateInfo.version}</span>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-green-700 mb-2">Release Notes:</p>
+              <p className="text-sm text-green-800 bg-white rounded-lg p-3 border border-green-200">
+                {updateInfo.body || 'No release notes available.'}
+              </p>
+            </div>
+            
+            {updateInfo.date && (
+              <div>
+                <p className="text-sm text-green-700">Release Date:</p>
+                <p className="font-medium text-green-900">{new Date(updateInfo.date).toLocaleDateString()}</p>
+              </div>
+            )}
+            
+            <div className="flex items-center space-x-3 pt-2">
+              <button
+                onClick={() => handleUpdate(updateInfo)}
+                className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                <span>Update Now</span>
+              </button>
+              <button
+                onClick={() => setUpdateInfo(null)}
+                className="px-4 py-2 bg-white text-green-700 rounded-lg border border-green-300 hover:bg-green-50 transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* System Information Card */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <Code className="w-5 h-5 text-blue-600" />
+            <span>System Information</span>
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">User Agent</p>
+              <p className="font-mono text-xs text-gray-700 break-all">{navigator.userAgent}</p>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Language</p>
+              <p className="font-medium text-gray-900">{navigator.language}</p>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-gray-600">Online Status</p>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <p className="font-medium text-green-600">Online</p>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">Cookies Enabled</p>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${navigator.cookieEnabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <p className={`font-medium ${navigator.cookieEnabled ? 'text-green-600' : 'text-red-600'}`}>
+                  {navigator.cookieEnabled ? 'Enabled' : 'Disabled'}
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <div className="mt-6 space-x-3">
-              <Button variant="outline" asChild>
-                <a 
-                  href="https://knowlia.site" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center"
-                >
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Learn more about Knowlia
-                </a>
-              </Button>
+      {/* Links Card */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <ExternalLink className="w-5 h-5 text-blue-600" />
+            <span>Links & Resources</span>
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => window.open('https://github.com/your-repo', '_blank')}
+            className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-left"
+          >
+            <Github className="w-5 h-5 text-gray-600" />
+            <div>
+              <p className="font-medium text-gray-900">GitHub Repository</p>
+              <p className="text-sm text-gray-600">View source code</p>
             </div>
+          </button>
+          
+          <button
+            onClick={() => window.open('https://your-docs-site.com', '_blank')}
+            className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors text-left"
+          >
+            <Info className="w-5 h-5 text-gray-600" />
+            <div>
+              <p className="font-medium text-gray-900">Documentation</p>
+              <p className="text-sm text-gray-600">Read the docs</p>
             </div>
-        </CardContent>
-      </Card>
+          </button>
+        </div>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>System Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-muted-foreground">Platform</span>
-            <span className="font-medium">
-              {typeof window !== 'undefined' ? window.navigator.platform : 'Unknown'}
-            </span>
-          </div>
-          <div className="flex justify-between py-2 border-b">
-            <span className="text-muted-foreground">Language</span>
-            <span className="font-medium">
-              {typeof window !== 'undefined' ? window.navigator.language : 'en-US'}
-            </span>
-          </div>
-          <div className="flex justify-between py-2">
-            <span className="text-muted-foreground">Online Status</span>
-            <Badge variant={typeof window !== 'undefined' && window.navigator.onLine ? 'default' : 'secondary'}>
-              {typeof window !== 'undefined' && window.navigator.onLine ? 'Online' : 'Offline'}
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Credits Card */}
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+            <Heart className="w-5 h-5 text-red-500" />
+            <span>Credits</span>
+          </h3>
+        </div>
 
-      <div className="text-center text-sm text-muted-foreground pt-4">
-        <p>© 2025 {appName}. All rights reserved.</p>
-        <p className="mt-1">Made with ❤️ for the community</p>
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Built with passion using modern web technologies. This application is powered by 
+            Tauri, React, and TypeScript to provide a seamless cross-platform experience.
+          </p>
+          <div className="flex items-center space-x-4 text-sm text-gray-500">
+            <span>© 2026 {appName}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,0 @@
-2025-12-16T20:25:56.556903Z  INFO rust_mcp_server: Starting Rust MCP Server args=Args { timeout: 600, log_level: "info", log_file: Some("log/rust-mcp-server.log,"), disabled_tools: [], workspace: Some("H:/Github/rust-mcp-server") }
-2025-12-16T20:25:56.557008Z  INFO rust_mcp_server: Long timeout set; some requests (e.g., cargo-build) may take a while timeout=600
-2025-12-16T20:25:56.557043Z  INFO rust_mcp_server: Server version version="0.2.7.6d39ee7"
-2025-12-16T20:25:56.557072Z  INFO rust_mcp_server: Workspace root has been overridden workspace=H:/Github/rust-mcp-server
-2025-12-16T20:25:56.557412Z  INFO rust_mcp_server::handler: Starting MCP Server enabled_tools=["user", "time", "product"] disabled_tools=[]
