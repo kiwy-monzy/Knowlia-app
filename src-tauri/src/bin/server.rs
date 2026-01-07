@@ -6,9 +6,9 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use serde::{Serialize, Deserialize};
 use directories::ProjectDirs;
+use rouille::{Response, Server};
 
 use libqaul::router::users::USERS;
-use libqaul::utilities::qaul_id::QaulId;
 
 /// Information about an internet neighbour for UI consumption
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,9 +31,23 @@ pub struct AllNeighbourInfo {
     pub connection_type: String,
 }
 
+/// User information for websocket consumption
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UserInfo {
+    pub id: String,
+    pub name: String,
+    pub is_online: bool,
+    pub last_seen: Option<u64>,
+    pub connection_type: Option<String>,
+    pub profile_pic: Option<String>,
+    pub about: Option<String>,
+    pub college: Option<String>,
+    pub reg_no: Option<String>,
+}
+
 #[tokio::main]
 async fn main() {
-    println!("=== Qaul WebSocket Server ===");
+    println!("=== Qaul WebSocket Server + HTTP Server ===");
     println!("Initializing libqaul...");
     
     init_libqaul().await;
@@ -44,6 +58,21 @@ async fn main() {
     if let Ok(users) = USERS.get().read() {
         println!("Loaded {} users from storage.", users.users.len());
     }
+
+    // Start HTTP server for egui web app
+    let http_server = tokio::spawn(async {
+        let server = Server::new("127.0.0.1:3000", move |request| {
+            match request.url() {
+                s if s == "/" => Response::html(include_str!("index.html").to_string()),
+                s if s == "/egui" => Response::html(include_str!("index.html").to_string()),
+                _ => Response::empty_404(),
+            }
+        }).map_err(|e| e.to_string());
+        
+        println!("HTTP server listening on: http://127.0.0.1:3000");
+        println!("egui web app available at: http://127.0.0.1:3000/egui");
+        server
+    });
 
     let addr = "127.0.0.1:8080";
     let listener = TcpListener::bind(&addr).await.expect("Failed to bind");
@@ -60,6 +89,7 @@ async fn main() {
             interval.tick().await;
             let all_neighbours = get_all_neighbours_ui();
             let internet_neighbours = get_internet_neighbours_ui();
+            let users = get_users_ui();
             let stats = get_network_stats().unwrap();
             
             let update = json!({
@@ -68,6 +98,7 @@ async fn main() {
                 "data": {
                     "all_neighbours": all_neighbours,
                     "internet_neighbours": internet_neighbours,
+                    "users": users,
                     "stats": stats
                 }
             });
@@ -76,7 +107,7 @@ async fn main() {
     });
 
     while let Ok((stream, addr)) = listener.accept().await {
-        println!("✓ New connection from: {}", addr);
+        println!("✓ New WebSocket connection from: {}", addr);
         let tx = tx.clone();
         tokio::spawn(handle_connection(stream, tx, addr));
     }
@@ -140,7 +171,7 @@ async fn init_libqaul() {
     });
 }
 
-async fn handle_connection(stream: TcpStream, tx: Arc<broadcast::Sender<String>>, client_addr: std::net::SocketAddr) {
+async fn handle_connection(stream: TcpStream, tx: Arc<broadcast::Sender<String>>, _client_addr: std::net::SocketAddr) {
     let ws_stream = match accept_async(stream).await {
         Ok(ws) => ws,
         Err(e) => { eprintln!("Error: {}", e); return; }
@@ -156,6 +187,7 @@ async fn handle_connection(stream: TcpStream, tx: Arc<broadcast::Sender<String>>
         "data": {
             "all_neighbours": get_all_neighbours_ui(),
             "internet_neighbours": get_internet_neighbours_ui(),
+            "users": get_users_ui(),
             "stats": get_network_stats().unwrap()
         }
     });
@@ -191,6 +223,15 @@ async fn handle_connection(stream: TcpStream, tx: Arc<broadcast::Sender<String>>
                                     "command": "get_stats",
                                     "timestamp": chrono::Utc::now().to_rfc3339(),
                                     "data": get_network_stats().unwrap()
+                                });
+                                let _ = ws_sender.send(Message::Text(data.to_string())).await;
+                            }
+                            "get_users" => {
+                                let data = json!({
+                                    "type": "response",
+                                    "command": "get_users",
+                                    "timestamp": chrono::Utc::now().to_rfc3339(),
+                                    "data": get_users_ui()
                                 });
                                 let _ = ws_sender.send(Message::Text(data.to_string())).await;
                             }
@@ -326,4 +367,76 @@ pub fn get_network_stats() -> Result<serde_json::Value, String> {
     });
     
     Ok(stats)
+}
+
+pub fn get_users_ui() -> Vec<UserInfo> {
+    let mut users = Vec::new();
+    
+    // Use the existing get_all_users_info() function which already provides the correct structure
+    match libqaul::router::users::Users::get_all_users_info() {
+        users_json => {
+            if let Ok(all_users) = serde_json::from_str::<Vec<serde_json::Value>>(&users_json) {
+                for user_value in all_users {
+                    // Extract base object and user data
+                    if let Some(base) = user_value.get("base") {
+                        if let (Some(id), Some(name), Some(is_online)) = (
+                            base.get("id").and_then(|v| v.as_str()),
+                            base.get("name").and_then(|v| v.as_str()),
+                            user_value.get("is_online").and_then(|v| v.as_bool())
+                        ) {
+                            // Get additional user data from the base object
+                            let profile_pic = base.get("profile").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            let about = base.get("about").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            let college = base.get("college").and_then(|v| v.as_str()).map(|s| s.to_string());
+                            let last_seen = user_value.get("last_seen").and_then(|v| v.as_u64());
+                            
+                            // Extract reg_no from college field - libqaul stores college and regNo together in college field
+                            // Format is typically "College Name - RegNo" or just "College Name" 
+                            let reg_no = college.as_ref().and_then(|college_str| {
+                                // Try to split by dash to separate reg_no
+                                college_str.split('-').nth(1).map(|s| s.trim().to_string())
+                            });
+                            
+                            // Get connection type if online
+                            let connection_type = if is_online {
+                                if let Some(connections) = user_value.get("connections").and_then(|v| v.as_array()) {
+                                    if let Some(first_connection) = connections.first() {
+                                        first_connection.get("module")
+                                            .and_then(|v| v.as_u64())
+                                            .and_then(|m| match m {
+                                                1 => Some("internet".to_string()),
+                                                2 => Some("lan".to_string()),
+                                                3 => Some("ble".to_string()),
+                                                4 => Some("local".to_string()),
+                                                _ => Some("none".to_string()),
+                                            })
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            };
+                            
+                            users.push(UserInfo {
+                                id: id.to_string(),
+                                name: name.to_string(),
+                                is_online,
+                                last_seen,
+                                connection_type,
+                                profile_pic,
+                                about,
+                                college,
+                                reg_no,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    users
 }

@@ -273,8 +273,8 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       } else {
         // Window doesn't exist, create it
         console.log('Creating auth window...');
+        setIsAuthWindowOpen(true); // Set to true immediately for better UX
         await invoke('create_auth_window');
-        setIsAuthWindowOpen(true);
         console.log('Auth window create command sent');
         
         // Get session data after opening window
@@ -320,6 +320,11 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       const windowExists = await checkAuthWindowExists();
       setIsAuthWindowOpen(windowExists);
       console.log('Initial auth window state:', windowExists);
+      
+      // Force button state update after a short delay
+      setTimeout(() => {
+        checkAuthWindowExists().then(setIsAuthWindowOpen);
+      }, 100);
     };
 
     // Check immediately on mount
@@ -338,8 +343,7 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
         }
         return actualWindowState;
       });
-    }, 2000); // Reduced frequency to avoid spam
-    
+    }, 1000); // Check every second for faster updates
     return () => clearInterval(windowStateInterval);
   }, []);
 
@@ -645,6 +649,19 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
                     <div><span className="text-gray-400">Expires:</span> {sessionData.expires_at ? new Date(sessionData.expires_at * 1000).toLocaleString() : 'N/A'}</div>
                     <div><span className="text-gray-400">Token Type:</span> {sessionData.token_type || 'N/A'}</div>
                     <div><span className="text-gray-400">Scope:</span> {sessionData.scope || 'N/A'}</div>
+                    <div className="pt-2 border-t border-gray-600">
+                      <button
+                        onClick={async () => {
+                          console.log('Manual auth check triggered');
+                          const windowExists = await checkAuthWindowExists();
+                          setIsAuthWindowOpen(windowExists);
+                          console.log('Manual check - window exists:', windowExists);
+                        }}
+                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded transition-colors"
+                      >
+                        🔄 Refresh State
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}

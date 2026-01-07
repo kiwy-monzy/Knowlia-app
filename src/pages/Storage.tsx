@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import StorageSidebar from "@/components/storage/StorageSidebar";
 import FileExplorer from "@/components/storage/FileExplorer";
 import FileHeader from "@/components/storage/FileHeader";
+import ProgressBar from "@/components/storage/ProgressBar";
 import { StorageProvider } from "@/contexts/StorageContext";
 import { useStorage } from "@/contexts/StorageContext";
 
 const StorageContent: React.FC = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const { activeTab, setActiveTab } = useStorage();
+  const { activeTab, setActiveTab, downloadTasks } = useStorage();
 
   return (
     <>
@@ -21,6 +22,11 @@ const StorageContent: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <FileExplorer viewMode={viewMode} />
       </div>
+      
+      <ProgressBar 
+        downloads={downloadTasks} 
+        isVisible={downloadTasks.length > 0} 
+      />
     </>
   );
 };

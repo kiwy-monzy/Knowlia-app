@@ -366,16 +366,16 @@ async fn create_auth_window(app_handle: AppHandle) -> Result<(), String> {
     let x_position = (screen.display_info.width as f64 - auth_width) / 2.0;
     let y_position = (screen.display_info.height as f64 - auth_height) / 2.0;
 
-    let auth_window = WebviewWindowBuilder::new(&app_handle, "auth", WebviewUrl::External("https://lms.udsm.ac.tz/".parse().unwrap()))
+    let auth_window = WebviewWindowBuilder::new(&app_handle, "auth", WebviewUrl::External("https://lms.udsm.ac.tz/local/wso2api/standalone.html".parse().unwrap()))
         .title("LMS")
         .inner_size(auth_width, auth_height)
         .position(x_position, y_position)
+        .data_directory(app_handle.path().app_data_dir().map_err(|e| format!("Failed to get app data directory: {}", e))?.join("shared_webview_data"))
         .resizable(true)
         .minimizable(true)
         .maximizable(true)
         .decorations(true)
         .shadow(false)
-        .data_directory("shared_webview_data".into())
         .disable_drag_drop_handler()
         .build()
         .map_err(|e| {
@@ -387,10 +387,6 @@ async fn create_auth_window(app_handle: AppHandle) -> Result<(), String> {
     // Inject CSS to hide scrollbars
     let css_injection = r#"
         <style>
-            /* Hide scrollbars for all browsers */
-            *::-webkit-scrollbar {
-                display: none !important;
-            }
             * {
                 scrollbar-width: none !important; /* Firefox */
                 -ms-overflow-style: none !important; /* Internet Explorer 10+ */
@@ -401,10 +397,6 @@ async fn create_auth_window(app_handle: AppHandle) -> Result<(), String> {
             background: none;
             overflow: hidden;
             touch-action: pan-x pan-y;
-            }
-            html::-webkit-scrollbar, 
-            body::-webkit-scrollbar {
-                display: none !important;
             }
         </style>
     "#;
@@ -449,6 +441,63 @@ async fn toggle_auth_window(app_handle: AppHandle) -> Result<(), String> {
     } else {
         // Window doesn't exist, create it
         create_auth_window(app_handle).await?;
+    }
+    
+    Ok(())
+}
+
+#[tauri_crate::command]
+async fn get_auth_cookies(app_handle: AppHandle) -> Result<(), String> {
+    println!("=== GETTING AUTH COOKIES ===");
+    
+    if let Some(auth_window) = app_handle.get_webview_window("auth") {
+        // Execute JavaScript to get all cookies
+        let js_code = r#"
+(function() {
+    console.log('=== COOKIE DUMP ===');
+    const cookies = document.cookie;
+    
+    if (cookies && cookies.length > 0) {
+        console.log('Raw cookie string:', cookies);
+        
+        const cookieArray = cookies.split(';');
+        console.log('Total cookies found:', cookieArray.length);
+        
+        for (let i = 0; i < cookieArray.length; i++) {
+            const cookie = cookieArray[i].trim();
+            const [name, value] = cookie.split('=');
+            
+            console.log(`Cookie ${i + 1}:`);
+            console.log(`  Name: "${name || 'empty'}"`);
+            console.log(`  Value: "${value || 'empty'}"`);
+            console.log(`  Raw: "${cookie}"`);
+            console.log('---');
+        }
+        
+        // Also check document.cookie properties
+        console.log('Document cookie properties:');
+        console.log('  Length:', cookies.length);
+        console.log('  Type:', typeof cookies);
+        
+    } else {
+        console.log('NO COOKIES FOUND - document.cookie is empty');
+    }
+    
+    console.log('=== END COOKIE DUMP ===');
+})()
+"#;
+        
+        match auth_window.eval(js_code) {
+            Ok(result) => {
+                println!("Cookie dump JavaScript executed successfully: {:?}", result);
+            },
+            Err(e) => {
+                println!("Failed to execute cookie dump JavaScript: {}", e);
+                return Err(format!("Failed to execute cookie dump: {}", e));
+            }
+        }
+    } else {
+        return Err("Auth window not found".to_string());
     }
     
     Ok(())
@@ -618,6 +667,38 @@ async fn check_auth_window_storage(app_handle: AppHandle, state: State<'_, AppSt
         let js_code = r#"
 (function() {
     console.log('Checking auth storage in shared data directory');
+    
+    // FIRST: Check cookies directly and print them
+    console.log('=== CHECKING COOKIES ===');
+    const cookies = document.cookie;
+    console.log('All cookies:', cookies);
+    
+    if (cookies && cookies.length > 0) {
+        const cookieArray = cookies.split(';');
+        console.log('Found', cookieArray.length, 'cookies:');
+        
+        for (let cookie of cookieArray) {
+            const [name, value] = cookie.trim().split('=');
+            if (name && value) {
+                console.log('Cookie:', name, '=', value);
+                
+                // Check for auth-related cookies
+                if (name.toLowerCase().includes('auth') || 
+                    name.toLowerCase().includes('token') || 
+                    name.toLowerCase().includes('session') ||
+                    name.toLowerCase().includes('login') ||
+                    name.toLowerCase().includes('sid')) {
+                    console.log('🔥 FOUND AUTH COOKIE:', name, '=', value);
+                    window.__TAURI__.emit('auth_storage_check_result', true);
+                    return;
+                }
+            }
+        }
+    } else {
+        console.log('No cookies found');
+    }
+    
+    console.log('=== CHECKING STORAGE ===');
     
     const oidcKeyPatterns = [
         'oidc.user:https://login.udsm.ac.tz/oauth2/oidcdiscovery:',
@@ -1082,6 +1163,7 @@ pub fn run() {
             create_auth_window,
             close_auth_window,
             toggle_auth_window,
+            get_auth_cookies,
             //KNOWLIA
             set_config_value,
             get_current_user_id,

@@ -357,16 +357,16 @@ async fn create_auth_window(app_handle: AppHandle) -> Result<(), String> {
     let x_position = (screen.display_info.width as f64 - auth_width) / 2.0;
     let y_position = (screen.display_info.height as f64 - auth_height) / 2.0;
 
-    let auth_window = WebviewWindowBuilder::new(&app_handle, "auth", WebviewUrl::External("https://lms.udsm.ac.tz/".parse().unwrap()))
+    let auth_window = WebviewWindowBuilder::new(&app_handle, "auth", WebviewUrl::External("https://lms.udsm.ac.tz/local/wso2api/standalone.html".parse().unwrap()))
         .title("LMS")
         .inner_size(auth_width, auth_height)
         .position(x_position, y_position)
+        .data_directory("shared_webview_data".into())
         .resizable(true)
         .minimizable(true)
         .maximizable(true)
         .decorations(true)
         .shadow(false)
-        .data_directory("shared_webview_data".into())
         .disable_drag_drop_handler()
         .build()
         .map_err(|e| {

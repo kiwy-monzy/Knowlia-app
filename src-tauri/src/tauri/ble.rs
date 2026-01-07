@@ -1,6 +1,7 @@
 use tauri::{plugin::{Builder, TauriPlugin}, Runtime};
 use serde::{Deserialize, Serialize};
 use libqaul::connections::ble;
+use std::sync::{Mutex, OnceLock};
 
 // BLE device information structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,9 +40,20 @@ pub struct BleStatus {
     pub last_error: Option<String>,
 }
 
-// Global state for simplicity
-static mut BLE_ENABLED: bool = false;
-static mut DISCOVERED_DEVICES: Vec<DiscoveredDevice> = Vec::new();
+// Thread-safe global state
+static BLE_STATE: OnceLock<Mutex<BleState>> = OnceLock::new();
+
+#[derive(Debug, Default)]
+struct BleState {
+    enabled: bool,
+    discovered_devices: Vec<DiscoveredDevice>,
+}
+
+impl BleState {
+    fn get() -> &'static Mutex<BleState> {
+        BLE_STATE.get_or_init(|| Mutex::new(BleState::default()))
+    }
+}
 
 /// Get BLE device information
 #[tauri::command]
@@ -69,8 +81,9 @@ pub async fn get_ble_info() -> Result<BleDeviceInfo, String> {
 /// Get current BLE status
 #[tauri::command]
 pub async fn get_ble_status() -> Result<BleStatus, String> {
-    let is_enabled = unsafe { BLE_ENABLED };
-    let discovered_count = unsafe { DISCOVERED_DEVICES.len() };
+    let state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
+    let discovered_count = state.discovered_devices.len();
+    let is_enabled = state.enabled;
     
     Ok(BleStatus {
         is_enabled,
@@ -86,8 +99,9 @@ pub async fn get_ble_status() -> Result<BleStatus, String> {
 #[tauri::command]
 pub async fn start_ble() -> Result<String, String> {
     // Update state
-    unsafe {
-        BLE_ENABLED = true;
+    {
+        let mut state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
+        state.enabled = true;
     }
 
     // Send start request to BLE module
@@ -100,9 +114,10 @@ pub async fn start_ble() -> Result<String, String> {
 #[tauri::command]
 pub async fn stop_ble() -> Result<String, String> {
     // Update state
-    unsafe {
-        BLE_ENABLED = false;
-        DISCOVERED_DEVICES.clear();
+    {
+        let mut state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
+        state.enabled = false;
+        state.discovered_devices.clear();
     }
 
     // Send stop request to BLE module
@@ -115,7 +130,8 @@ pub async fn stop_ble() -> Result<String, String> {
 #[tauri::command]
 pub async fn get_discovered_devices() -> Result<Vec<DiscoveredDevice>, String> {
     // Return current discovered devices
-    let devices = unsafe { DISCOVERED_DEVICES.clone() };
+    let state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
+    let devices = state.discovered_devices.clone();
     Ok(devices)
 }
 
@@ -156,10 +172,10 @@ pub fn add_discovered_device(device: ble::proto::BleDeviceDiscovered) {
             .as_secs(),
     };
 
-    unsafe {
+    if let Ok(mut state) = BleState::get().lock() {
         // Check if device already exists
-        if !DISCOVERED_DEVICES.iter().any(|d| d.qaul_id == discovered_device.qaul_id) {
-            DISCOVERED_DEVICES.push(discovered_device);
+        if !state.discovered_devices.iter().any(|d| d.qaul_id == discovered_device.qaul_id) {
+            state.discovered_devices.push(discovered_device);
         }
     }
 }
@@ -168,8 +184,8 @@ pub fn add_discovered_device(device: ble::proto::BleDeviceDiscovered) {
 pub fn remove_discovered_device(device: ble::proto::BleDeviceUnavailable) {
     let device_id = hex::encode(&device.qaul_id);
     
-    unsafe {
-        DISCOVERED_DEVICES.retain(|d| d.qaul_id != device_id);
+    if let Ok(mut state) = BleState::get().lock() {
+        state.discovered_devices.retain(|d| d.qaul_id != device_id);
     }
 }
 

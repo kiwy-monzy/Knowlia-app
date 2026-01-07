@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStorage } from '@/contexts/StorageContext';
-import { ArrowLeft, Home, Folder, Grid, List, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Home, Folder, Grid, List, ChevronDown, RefreshCw } from 'lucide-react';
 
 interface FileHeaderProps {
   viewMode?: 'grid' | 'list';
@@ -15,9 +15,21 @@ const FileHeader: React.FC<FileHeaderProps> = ({
   activeTab = 'gdrive', 
   onTabChange 
 }) => {
-  const { currentPath, navigateUp, navigateToRoot, loadRootFolder, rootFolders, downloadsPath, downloadedFiles, setCurrentPath, setDownloadsPath } = useStorage();
+  const { currentPath, navigateUp, navigateToRoot, loadRootFolder, rootFolders, downloadsPath, downloadedFiles, setCurrentPath, setDownloadsPath, refreshRootFolders } = useStorage();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshRootFolders();
+    } catch (error) {
+      console.error('Failed to refresh:', error);
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 500); // Brief visual feedback
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -36,18 +48,16 @@ const FileHeader: React.FC<FileHeaderProps> = ({
     };
   }, [showDropdown]);
 
-  const truncateName = (name: string): string => {
+  const truncateName = (name: string, maxLength: number = 8): string => {
     if (!name) return '';
     
-    // Split by space and take first word
-    const firstWord = name.split(' ')[0];
-    
-    // If first word is longer than 4 chars, truncate to 4 chars + '...'
-    if (firstWord.length > 4) {
-      return firstWord.slice(0, 4) + '...';
+    // If name is short enough, return as-is
+    if (name.length <= maxLength) {
+      return name;
     }
     
-    return firstWord;
+    // Truncate to maxLength chars with '...'
+    return name.slice(0, maxLength) + '...';
   };
 
   const handleHomeClick = () => {
@@ -137,16 +147,16 @@ const FileHeader: React.FC<FileHeaderProps> = ({
 
           {/* Breadcrumb navigation */}
           <div className="flex items-center space-x-1 text-sm flex-1 min-w-0">
-            {breadcrumbs.length > 3 ? (
+            {breadcrumbs.length > 5 ? (
               // Show dropdown when too many breadcrumbs
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setShowDropdown(!showDropdown)}
                   className="flex items-center space-x-1 p-2 rounded hover:bg-gray-100 transition-colors"
-                  title="Show path"
+                  title={breadcrumbs[breadcrumbs.length - 1].name}
                 >
                   <Folder className="w-4 h-4" />
-                  <span>{truncateName(breadcrumbs[breadcrumbs.length - 1].name)}</span>
+                  <span className="truncate max-w-24">{truncateName(breadcrumbs[breadcrumbs.length - 1].name)}</span>
                   <ChevronDown className="w-3 h-3" />
                 </button>
                 
@@ -184,15 +194,15 @@ const FileHeader: React.FC<FileHeaderProps> = ({
                     )}
                     <button
                       onClick={() => navigateToBreadcrumb(breadcrumb.index)}
-                      className={`flex items-center space-x-1 p-2 rounded transition-colors flex-shrink-0 ${
+                      className={`flex items-center space-x-1 p-1 rounded transition-colors flex-shrink-0 max-w-32 ${
                         breadcrumb.isLast
-                          ? 'bg-blue-100 text-blue-700 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
+                          ? 'bg-blue-50 text-blue-700 font-medium'
+                          : 'text-gray-700 hover:bg-gray-50'
                       }`}
                       title={breadcrumb.name}
                     >
-                      <Folder className="w-4 h-4" />
-                      <span>{truncateName(breadcrumb.name)}</span>
+                      <Folder className="w-4 h-4 flex-shrink-0" />
+                      <span className="truncate">{truncateName(breadcrumb.name, 12)}</span>
                     </button>
                   </React.Fragment>
                 ))}
@@ -205,6 +215,19 @@ const FileHeader: React.FC<FileHeaderProps> = ({
 
           {/* Current folder info and view mode toggle */}
           <div className="flex items-center space-x-4">
+            {/* Refresh button */}
+            <button
+              onClick={handleRefresh}
+              className={`p-2 rounded transition-all duration-200 ${
+                isRefreshing 
+                  ? 'bg-blue-100 text-blue-600 animate-spin' 
+                  : 'hover:bg-gray-100 text-gray-500'
+              }`}
+              title="Refresh"
+            >
+              <RefreshCw className="w-4 h-4" />
+            </button>
+            
             <div className="text-sm text-gray-500">
               {(() => {
                 if (activeTab === 'downloads') {

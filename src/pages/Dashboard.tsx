@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
 import NewsCard from '@/components/home/NewsCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import Snowfall from "react-snowfall";
+//import Snowfall from "react-snowfall";
 import React from "react";
 import { GroupMemberList } from '@/components/group/GroupMemberList';
 
@@ -51,7 +51,7 @@ function Dashboard() {
     <ScrollArea className="h-full rounded-l-[2rem]  w-full bg-[#fafafa] justify-center items-center">
       {/* ==== Background Grid Overlay ==== */}
       <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#1a1a1a,transparent_1px),linear-gradient(to_bottom,#1a1a1a33_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
-          {/* Snowfall effect */}
+          {/* Snowfall effect 
           <div className="fixed inset-0 pointer-events-none z-50 hidden">
             <Snowfall 
               snowflakeCount={100}
@@ -63,7 +63,7 @@ function Dashboard() {
                 height: '100vh',
               }}
             />
-          </div>
+          </div>*/}
       <div className="relative z-10 w-full flex flex-col items-center">
           {/* ===================== HEADER ===================== */}
           <h1 className="text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-center font-luckiest-guy text-[#1a1a1a]">

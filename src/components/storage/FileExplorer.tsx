@@ -4,6 +4,7 @@ import { Download, Eye } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import NoContent from '../NoContent';
 import FileOpeningModal from './FileOpeningModal';
+import { DocumentPreview } from '../DocumentPreview';
 
 interface FileExplorerProps {
   viewMode?: 'grid' | 'list';
@@ -14,6 +15,8 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ viewMode = 'grid' }) => {
   const [recentlyDownloaded, setRecentlyDownloaded] = useState<Set<string>>(new Set());
   const [isOpeningFile, setIsOpeningFile] = useState(false);
   const [openingFileName, setOpeningFileName] = useState('');
+  const [documentPreview, setDocumentPreview] = useState<{ content: string; name: string } | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const items = getCurrentItems();
 
@@ -107,12 +110,36 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ viewMode = 'grid' }) => {
       setIsOpeningFile(true);
       setOpeningFileName(file.name);
       
-      // Open the file
-      await invoke('open_file', {
-        fileName: file.name
-      });
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const supportedFormats = ['pdf', 'docx', 'doc', 'xlsx', 'xls', 'pptx', 'ppt', 'txt'];
       
-      // Hide modal after a short delay to show the opening process
+      if (supportedFormats.includes(fileExtension || '')) {
+        // Open file with DocumentPreview component
+        try {
+          // Get file content as base64 from Tauri
+          // Use the correct path for KNOWLIA#NOTES directory
+          const fileContent = await invoke('read_file_as_base64', {
+            filePath: `C:\\Users\\PC\\Documents\\KNOWLIA#NOTES\\${file.name}`
+          });
+          
+          // Set document preview state
+          setDocumentPreview({
+            content: fileContent as string,
+            name: file.name
+          });
+        } catch (previewError) {
+          console.error('Failed to load file for preview:', previewError);
+          // Fallback to regular file opening
+          await invoke('open_storage_file', { file_name: file.name });
+        }
+      } else {
+        // For unsupported formats, open with default system application
+        await invoke('open_storage_file', {
+          file_name: file.name
+        });
+      }
+      
+      // Hide modal after a short delay
       setTimeout(() => {
         setIsOpeningFile(false);
         setOpeningFileName('');
@@ -126,7 +153,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ viewMode = 'grid' }) => {
     }
   };
 
-  if (loading) {
+  if (loading && items.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <NoContent title="Loading..." />
@@ -154,7 +181,7 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ viewMode = 'grid' }) => {
   }
 
   return (
-    <div className="flex flex-col w-full h-full p-4 bg-[#fafafa]">
+    <div className={`flex flex-col w-full h-full p-4 bg-[#fafafa] transition-opacity duration-200 ${isRefreshing ? 'opacity-70' : 'opacity-100'}`}>
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {items.map((item) => (
@@ -285,6 +312,15 @@ const FileExplorer: React.FC<FileExplorerProps> = ({ viewMode = 'grid' }) => {
           setOpeningFileName('');
         }}
       />
+      
+      {/* Document Preview Modal */}
+      {documentPreview && (
+        <DocumentPreview
+          fileContent={documentPreview.content}
+          fileName={documentPreview.name}
+          onClose={() => setDocumentPreview(null)}
+        />
+      )}
     </div>
   );
 };

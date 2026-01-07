@@ -198,7 +198,7 @@ html {
 
 /* Custom styles for group members */
 .group-member {
-  @apply flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors;
+  @apply flex items-center p-3 hover:bg-gray-50 rounded-lg;
 }
 
 .avatar {

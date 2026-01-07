@@ -550,6 +550,25 @@
             </div>
         </div>
 
+        <div class="section">
+            <div class="section-header">
+                <h2>👥 Users</h2>
+                <div class="section-actions">
+                    <button class="btn" onclick="requestData('get_users')">
+                        <span>🔄</span> Refresh
+                    </button>
+                </div>
+            </div>
+            <div class="table-container">
+                <div id="usersTable">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span>Loading data...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <footer>
             <p>Qaul Network Monitor v1.0 | WebSocket Status: <span id="wsStatus">Disconnected</span></p>
         </footer>
@@ -634,6 +653,10 @@
 
             if (data.internet_neighbours) {
                 renderInternetNeighboursTable(data.internet_neighbours);
+            }
+
+            if (data.users) {
+                renderUsersTable(data.users);
             }
         }
 
@@ -776,7 +799,93 @@
             } else if (data.command === 'get_internet') {
                 renderInternetNeighboursTable(data.data);
                 showToast('Internet neighbours refreshed', 'success');
+            } else if (data.command === 'get_users') {
+                renderUsersTable(data.data);
+                showToast('Users refreshed', 'success');
             }
+        }
+
+        function renderUsersTable(users) {
+            const container = document.getElementById('usersTable');
+            
+            if (users.length === 0) {
+                container.innerHTML = `
+                    <div class="no-data">
+                        <div class="no-data-icon">👥</div>
+                        <p>No users found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const table = `
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>ID</th>
+                            <th>Status</th>
+                            <th>Connection</th>
+                            <th>Reg No</th>
+                            <th>About</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(u => `
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div style="position: relative;">
+                                            <img 
+                                                src='${u.profile_pic || '/default-avatar.png'}'
+                                                alt="${escapeHtml(u.name)}"
+                                                style="width: 32px; height: 32px; border-radius: 8px; object-fit: cover; border: 2px solid #f0f0f0;"
+                                                onerror="this.src='/default-avatar.png'"
+                                            />
+                                            <span style="
+                                                position: absolute; 
+                                                bottom: -2px; 
+                                                right: -2px; 
+                                                width: 12px; 
+                                                height: 12px; 
+                                                border-radius: 50%; 
+                                                border: 2px solid white;
+                                                background: ${u.is_online ? '#10b981' : '#ef4444'};
+                                            "></span>
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; color: #374151;">
+                                                ${escapeHtml(u.name)}
+                                            </div>
+                                            <div style="font-size: 0.75rem; color: #6b7280;">
+                                                ${u.is_online ? 'Online' : 'Offline'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="peer-id" title="${escapeHtml(u.id)}">${escapeHtml(u.id.substring(0, 8))}...</span></td>
+                                <td>
+                                    <span class="online-status">
+                                        <span class="${u.is_online ? 'online-dot' : 'offline-dot'}"></span>
+                                        ${u.is_online ? 'Online' : 'Offline'}
+                                    </span>
+                                </td>
+                                <td>
+                                    ${u.connection_type ? `<span class="connection-badge badge-${u.connection_type}">${u.connection_type}</span>` : '-'}
+                                </td>
+                                <td>${u.reg_no || '-'}</td>
+                                <td>
+                                    <div style="max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.875rem; color: #6b7280;">
+                                        ${u.about || '-'}
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+            container.innerHTML = table;
         }
 
         function requestData(command) {

@@ -160,13 +160,8 @@ export const NetworkGraph: React.FC<NetworkGraphProps> = React.memo(({
   showFilters,
   onUserClick,
 }) => {
-  if (!Array.isArray(users) || users.length === 0) {
-    return (
-      <div className="h-96 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center">
-        <p className="text-gray-500">No network data available</p>
-      </div>
-    );
-  }
+  // Always render the graph if we have users, even if they have no connections
+  // The "no connections" state is handled at the parent component level
 
   // ⭐ FIRST: Filter users based on connection types
   const filteredUsers = React.useMemo(() => {
@@ -468,6 +463,11 @@ export default function NetworkSettings({
   }, [networkUsers]);
 
   const hasNetworkUsers = Array.isArray(networkUsers) && networkUsers.length > 0;
+  
+  // Also check if there are any nodes (users without connections) to display
+  const hasAnyNodes = hasNetworkUsers || (Array.isArray(networkUsers) && networkUsers.some(user => 
+    user.connections.length === 0 || user.connections.some(conn => conn.via_node)
+  ));
 
   return (
     <div className="p-6 pb-18 space-y-6 bg-white min-h-screen">
@@ -616,7 +616,7 @@ export default function NetworkSettings({
           <div className="flex items-center justify-center h-96">
             <p className="text-red-600">{error}</p>
           </div>
-        ) : !hasNetworkUsers ? (
+        ) : !hasAnyNodes ? (
           <div className="flex flex-col items-center justify-center h-96 text-center">
             <WifiOff className="w-16 h-16 text-gray-300 mb-4" />
             <p className="text-gray-600 font-medium">No network connections found</p>

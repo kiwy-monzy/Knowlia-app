@@ -268,7 +268,7 @@ const loadRootFolder = useCallback(async () => {
         loadDownloadedFiles();
         loadRecordedDownloads();
       }
-    }, 5000); // Refresh every 5 seconds
+    }, 10000); // Refresh every 10 seconds (reduced frequency)
 
     return () => clearInterval(intervalId);
   }, [loadRootFolder, loadDownloadedFiles, loadRecordedDownloads, activeTab]);
