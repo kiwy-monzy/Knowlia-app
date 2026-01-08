@@ -4,6 +4,7 @@ import clickSound from '@/assets/mouse-click.mp3';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { useChatContext } from '@/contexts/ChatContext';
+import { listen } from '@tauri-apps/api/event';
 import './Sidebar.css';
 import logo from '@/assets/logo.png';
 import LiquidGlass from 'liquid-glass-react'

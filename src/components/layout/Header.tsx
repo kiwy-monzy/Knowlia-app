@@ -3,6 +3,7 @@ import { Menu as MenuIcon, X as XIcon, Minimize, Maximize, X, User, ChevronDown,
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { WebviewWindow } from '@tauri-apps/api/webviewWindow';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useTheme } from '../../contexts/ThemeContext';
 import logoUd from '../../assets/logo_ud.png';
 import './Header.css';
@@ -347,13 +348,17 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
     return () => clearInterval(windowStateInterval);
   }, []);
 
-  // Load profile data on mount and refresh every 2 seconds
+  // Load profile data and set up background sync listeners
   useEffect(() => {
-    const loadProfile = async () => {
+    let unlistenProfile: (() => void) | null = null;
+    let unlistenUnreadCount: (() => void) | null = null;
+    let unlistenInternetNeighbours: (() => void) | null = null;
+
+    const setupBackgroundListeners = async () => {
+      // Initial load
       try {
         const profileResult = await invoke<string>('user_profile');
         
-        // Handle the response properly - it should be JSON from user_profile
         if (profileResult) {
           let profile;
           try {
@@ -369,13 +374,8 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
             college: profile.college || ''
           });
           setShowProfile(true);
-          //console.log('Profile data set:', profile.name || 'User');
-        } else {
-          //console.log('No profile result received');
         }
       } catch (error) {
-       // console.error('Failed to load profile:', error);
-        // Set default values on error
         setProfileData({
           name: 'User',
           profile: '',
@@ -384,73 +384,53 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
         });
         setShowProfile(true);
       }
-    };
-    
-    // Load unread count
-    const loadUnreadCount = async () => {
+
       try {
         const count = await invoke<number>('get_total_unread_count');
         setTotalUnreadCount(count);
       } catch (error) {
-        //console.error('Failed to load unread count:', error);
         setTotalUnreadCount(0);
       }
-    };
-    
-    // Load immediately
-    loadProfile();
-    loadUnreadCount();
-    
-    // Set up interval to refresh every 500ms for better responsiveness
-    const intervalId = setInterval(() => {
-      loadProfile();
-      loadUnreadCount();
-    }, 500);
-    
-    // Cleanup interval on unmount
-    return () => clearInterval(intervalId);
-  }, []);
 
-  // Separate effect for unread count to ensure more frequent updates
-  useEffect(() => {
-    const loadUnreadCount = async () => {
-      try {
-        const count = await invoke<number>('get_total_unread_count');
-        setTotalUnreadCount(count);
-      } catch (error) {
-        //console.error('Failed to load unread count:', error);
-        setTotalUnreadCount(0);
-      }
-    };
-
-    // Load immediately
-    loadUnreadCount();
-    
-    // Refresh every 300ms for very responsive updates
-    const unreadInterval = setInterval(() => {
-      loadUnreadCount();
-    }, 300);
-    
-    return () => clearInterval(unreadInterval);
-  }, []);
-
-  // Fetch internet neighbours data
-  useEffect(() => {
-    const fetchInternetNeighbours = async () => {
       try {
         const neighbours = await invoke<InternetNeighbourInfo[]>('get_internet_neighbours_ui_command');
         setInternetNeighbours(neighbours);
       } catch (error) {
         console.error('Failed to fetch internet neighbours:', error);
       }
+
+      // Set up background listeners
+      unlistenProfile = await listen<string>('user_profile_updated', (event) => {
+        try {
+          const profile = JSON.parse(event.payload);
+          setProfileData({
+            name: profile.name || 'User',
+            profile: profile.profile || '',
+            about: profile.about || '',
+            college: profile.college || ''
+          });
+          setShowProfile(true);
+        } catch (error) {
+          console.error('Failed to parse profile update:', error);
+        }
+      });
+
+      unlistenUnreadCount = await listen<number>('total_unread_count_updated', (event) => {
+        setTotalUnreadCount(event.payload);
+      });
+
+      unlistenInternetNeighbours = await listen<InternetNeighbourInfo[]>('internet_neighbours_updated', (event) => {
+        setInternetNeighbours(event.payload);
+      });
     };
 
-    fetchInternetNeighbours();
-    
-    // Refresh every 2 seconds
-    const interval = setInterval(fetchInternetNeighbours, 2000);
-    
-    return () => clearInterval(interval);
+    setupBackgroundListeners();
+
+    return () => {
+      if (unlistenProfile) unlistenProfile();
+      if (unlistenUnreadCount) unlistenUnreadCount();
+      if (unlistenInternetNeighbours) unlistenInternetNeighbours();
+    };
   }, []);
 
   useEffect(() => {

@@ -28,7 +28,6 @@ export const SiteProvider = ({ children }: { children: ReactNode }) => {
   const [assignmentCount, setAssignmentCount] = useState<number>(0);
   const [courseCount, setCourseCount] = useState<number>(0);
   const [isLoadingCounts, setIsLoadingCounts] = useState<boolean>(false);
-  const [networkStats, setNetworkStats] = useState<NetworkStats | undefined>(undefined);
 
   const testConnection = (_opts?: any) => {};
 
@@ -94,24 +93,7 @@ export const SiteProvider = ({ children }: { children: ReactNode }) => {
     refreshCounts();
   }, [refreshCounts]);
 
-  // Fetch network stats periodically
-  useEffect(() => {
-    const fetchNetworkStats = async () => {
-      try {
-        const stats = await invoke<NetworkStats>('get_network_stats');
-        setNetworkStats(stats);
-      } catch (error) {
-        console.error('Failed to fetch network stats:', error);
-      }
-    };
 
-    fetchNetworkStats();
-    
-    // Refresh every 2 seconds
-    const interval = setInterval(fetchNetworkStats, 2000);
-    
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <SiteContext.Provider
@@ -121,8 +103,7 @@ export const SiteProvider = ({ children }: { children: ReactNode }) => {
         assignmentCount,
         courseCount,
         refreshCounts,
-        isLoadingCounts,
-        networkStats,
+        isLoadingCounts
       }}
     >
       {children}

@@ -1,5 +1,15 @@
 import React from "react";
-import { BookOpen, ClipboardList } from "lucide-react";
+import { 
+  BookOpen, 
+  ClipboardList, 
+  Users, 
+  MessageCircle, 
+  Activity,
+  Wifi,
+  Globe,
+  Clock,
+  CheckCircle
+} from "lucide-react";
 import { MeshGradient } from "@paper-design/shaders-react";
 
 interface StatusCardProps {
@@ -17,18 +27,41 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
   icon,
   color
 }) => {
-  // Default icon based on name
-  const defaultIcon = name.toLowerCase().includes('course') ? 
-    <BookOpen size={24} color="white" /> : 
-    <ClipboardList size={24} color="white" />;
-  const displayIcon = icon || defaultIcon;
+  // Default icon based on name - enhanced with more specific icons
+  const defaultIcon = () => {
+    const nameLower = name.toLowerCase();
+    
+    if (nameLower.includes('course') || nameLower.includes('total group')) {
+      return <Users size={32} color="white" />;
+    }
+    if (nameLower.includes('chat') || nameLower.includes('direct')) {
+      return <MessageCircle size={32} color="white" />;
+    }
+    if (nameLower.includes('unread') || nameLower.includes('message')) {
+      return <Activity size={32} color="white" />;
+    }
+    if (nameLower.includes('network') || nameLower.includes('connection')) {
+      return <Wifi size={32} color="white" />;
+    }
+    if (nameLower.includes('online') || nameLower.includes('active')) {
+      return <CheckCircle size={32} color="white" />;
+    }
+    if (nameLower.includes('time') || nameLower.includes('recent')) {
+      return <Clock size={32} color="white" />;
+    }
+    
+    // Default fallback
+    return <ClipboardList size={32} color="white" />;
+  };
+  
+  const displayIcon = icon || defaultIcon();
 
   return (
   <>
     <style>
       {`
         .icon-container {
-          transform: translate(-50%, -50%);
+          transform: translate(-43%, -50%);
         }
         .icon-wrapper {
           display: flex;
@@ -54,7 +87,7 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
         <MeshGradient
           speed={1}
           colors={["#1a1a1a", "#0a0a0a", "#2a2a2a", "#151515"]}
-          distortion={0.8}
+          distortion={0.9}
           swirl={0.1}
           grainMixer={0}
           grainOverlay={0}
@@ -62,7 +95,7 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
           style={{ height: "100%", width: "100%" }}
         />
       </div>
-      <svg width={302.752} height={185.154} viewBox="0 0 302.752 185.154" style={{ position: 'relative', zIndex: 1 }}>
+      <svg width={320.752} height={185.154} viewBox="0 0 320.752 185.154" style={{ position: 'relative', zIndex: 1 }}>
     <defs>
       <style>
         {`
@@ -514,7 +547,7 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
       <g transform="translate(287 22)">
         <g transform="translate(-0.347 -1)">
           <text className="h" transform="translate(464.347 123)">
-            <tspan x={130} y={30} textAnchor="end">
+            <tspan x={150} y={30} textAnchor="end">
                 {name}
             </tspan>
           </text>
@@ -522,15 +555,15 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
             className="circle"
             cx={29.5}
             cy={29.5}
-            r={29.5}
-            transform="translate(542.347 236)"
+            r={25.5}
+            transform="translate(555 236)"
           />
           <foreignObject
             x="693"
             y="329"
             width="60"
             height="60"
-            transform="translate(542.347 236)"
+            transform="translate(555 236)"
             className="icon-container "
           >
             <div className="icon-wrapper">
@@ -539,7 +572,7 @@ const StatuscardComponent: React.FC<StatusCardProps> = ({
           </foreignObject>
         </g>
         <text className="j " transform="translate(416 129.5)">
-          <tspan x={185} y={100} textAnchor="end">
+          <tspan x={200} y={100} textAnchor="end">
             {count}
           </tspan>
 

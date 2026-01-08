@@ -245,16 +245,55 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setTotalUnreadMessages(unread);
   };
 
-  // Smooth update function for channels - merges new data with existing
+  // Smooth update function for channels - merges new data with existing, only updates if changed
   const updateChannelsSmooth = (newChannels: Channel[]) => {
     setChannels(prevChannels => {
       // Create a map of existing channels
       const channelMap = new Map(prevChannels.map(ch => [ch.id, ch]));
       
-      // Update or add new channels
+      let hasChanges = false;
+      let changedFields: string[] = [];
+      
+      // Check for changes and update only if necessary
       newChannels.forEach(newChannel => {
-        channelMap.set(newChannel.id, newChannel);
+        const existingChannel = channelMap.get(newChannel.id);
+        
+        // Check if channel has actually changed
+        if (!existingChannel || 
+            existingChannel.name !== newChannel.name ||
+            existingChannel.unreadMessages !== newChannel.unreadMessages ||
+            existingChannel.lastMessageAt !== newChannel.lastMessageAt ||
+            existingChannel.lastMessage !== newChannel.lastMessage ||
+            existingChannel.members.length !== newChannel.members.length ||
+            JSON.stringify(existingChannel.members) !== JSON.stringify(newChannel.members)) {
+          
+          channelMap.set(newChannel.id, newChannel);
+          hasChanges = true;
+          
+          // Track what changed for debugging
+          if (!existingChannel) {
+            changedFields.push(`new channel: ${newChannel.name}`);
+          } else {
+            if (existingChannel.unreadMessages !== newChannel.unreadMessages) {
+              changedFields.push(`${newChannel.name}: unread ${existingChannel.unreadMessages}→${newChannel.unreadMessages}`);
+            }
+            if (existingChannel.lastMessageAt !== newChannel.lastMessageAt) {
+              changedFields.push(`${newChannel.name}: new message`);
+            }
+            if (existingChannel.name !== newChannel.name) {
+              changedFields.push(`${newChannel.name}: renamed`);
+            }
+          }
+        }
       });
+      
+      // If no changes detected, return previous state to avoid re-render
+      if (!hasChanges) {
+        console.debug('ChatContext: No channel changes detected, skipping update');
+        return prevChannels;
+      }
+      
+      console.debug('ChatContext: Channel changes detected:', changedFields);
       
       // Convert back to array and sort
       const updatedChannels = Array.from(channelMap.values()).sort((a, b) => {
@@ -281,23 +320,43 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     );
   };
 
-  // Smooth update function for contacts - merges without flickering
+  // Smooth update function for contacts - merges without flickering, only updates if changed
   const updateContactsSmooth = (newContacts: UserProfile[]) => {
     setContacts(prevContacts => {
       // Create a map of existing contacts
       const contactMap = new Map(prevContacts.map(c => [c.id, c]));
       
-      // Update or add new contacts
+      let hasChanges = false;
+      
+      // Check for changes and update only if necessary
       newContacts.forEach(newContact => {
-        contactMap.set(newContact.id, newContact);
+        const existingContact = contactMap.get(newContact.id);
+        
+        // Check if contact has actually changed
+        if (!existingContact || 
+            existingContact.name !== newContact.name ||
+            existingContact.isOnline !== newContact.isOnline ||
+            existingContact.last_seen !== newContact.last_seen ||
+            existingContact.status !== newContact.status ||
+            existingContact.about !== newContact.about ||
+            existingContact.avatar !== newContact.avatar) {
+          
+          contactMap.set(newContact.id, newContact);
+          hasChanges = true;
+        }
       });
+      
+      // If no changes detected, return previous state to avoid re-render
+      if (!hasChanges) {
+        return prevContacts;
+      }
       
       // Convert back to array
       return Array.from(contactMap.values());
     });
   };
 
-  // Smooth update function for invitations
+  // Smooth update function for invitations - only updates if changed
   const updateInvitationsSmooth = (newInvitations: GroupInvitation[]) => {
     setInvitations(prevInvitations => {
       // Create a map of existing invitations by group_id
@@ -310,13 +369,31 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         ])
       );
       
-      // Update or add new invitations
+      let hasChanges = false;
+      
+      // Check for changes and update only if necessary
       newInvitations.forEach(newInv => {
         const key = Array.isArray(newInv.group.group_id) 
           ? newInv.group.group_id.join(',') 
           : String(newInv.group.group_id);
-        invitationMap.set(key, newInv);
+        
+        const existingInv = invitationMap.get(key);
+        
+        // Check if invitation has actually changed
+        if (!existingInv || 
+            existingInv.sender_id !== newInv.sender_id ||
+            existingInv.received_at !== newInv.received_at ||
+            JSON.stringify(existingInv.group) !== JSON.stringify(newInv.group)) {
+          
+          invitationMap.set(key, newInv);
+          hasChanges = true;
+        }
       });
+      
+      // If no changes detected, return previous state to avoid re-render
+      if (!hasChanges) {
+        return prevInvitations;
+      }
       
       // Convert back to array
       return Array.from(invitationMap.values());
@@ -589,6 +666,47 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     });
     
+    // Background data sync listeners
+    const unlistenTotalUnreadCount = await listen<number>('total_unread_count_updated', (event) => {
+      try {
+        const count = event.payload;
+        setTotalUnreadMessages(count);
+        console.log('Total unread count updated:', count);
+      } catch (error) {
+        handleListenerError(error, 'total_unread_count');
+      }
+    });
+    
+    const unlistenUserProfile = await listen<string>('user_profile_updated', (event) => {
+      try {
+        const profile = JSON.parse(event.payload);
+        console.log('User profile updated:', profile);
+        // Profile data can be used to update user context
+      } catch (error) {
+        handleListenerError(error, 'user_profile');
+      }
+    });
+    
+    const unlistenNetworkStats = await listen<any>('network_stats_updated', (event) => {
+      try {
+        const stats = event.payload;
+        console.log('Network stats updated:', stats);
+        // Network stats can be displayed in UI components
+      } catch (error) {
+        handleListenerError(error, 'network_stats');
+      }
+    });
+    
+    const unlistenInternetNeighbours = await listen<any[]>('internet_neighbours_updated', (event) => {
+      try {
+        const neighbours = event.payload;
+        console.log('Internet neighbours updated:', neighbours?.length, 'neighbours');
+        // Neighbours data can be used to update network status
+      } catch (error) {
+        handleListenerError(error, 'internet_neighbours');
+      }
+    });
+    
     
     // Return unified cleanup function
     return () => {
@@ -596,6 +714,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unlistenGroups();
       unlistenInvitations();
       unlistenConnectionStatus();
+      unlistenTotalUnreadCount();
+      unlistenUserProfile();
+      unlistenNetworkStats();
+      unlistenInternetNeighbours();
     };
   };
 

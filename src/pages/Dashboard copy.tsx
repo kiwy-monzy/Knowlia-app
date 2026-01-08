@@ -9,6 +9,7 @@ import { useChatContext } from "@/contexts/ChatContext";
 import { invoke } from '@tauri-apps/api/core';
 import NewsCard from '@/components/home/NewsCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
+//import Snowfall from "react-snowfall";
 import React from "react";
 import { GroupMemberList } from '@/components/group/GroupMemberList';
 
@@ -99,6 +100,19 @@ function Dashboard() {
     <ScrollArea className="h-full rounded-l-[2rem]  w-full bg-[#fafafa] justify-center items-center">
       {/* ==== Background Grid Overlay ==== */}
       <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#1a1a1a,transparent_1px),linear-gradient(to_bottom,#1a1a1a33_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
+          {/* Snowfall effect 
+          <div className="fixed inset-0 pointer-events-none z-50 hidden">
+            <Snowfall 
+              snowflakeCount={100}
+              enable3DRotation={true}
+              wind={[-0.2, 0.2]}
+              style={{
+                position: 'fixed',
+                width: '100vw',
+                height: '100vh',
+              }}
+            />
+          </div>*/}
       <div className="relative z-10 w-full flex flex-col items-center">
           {/* ===================== HEADER ===================== */}
           <h1 className="text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-center font-luckiest-guy text-[#1a1a1a]">
@@ -108,20 +122,19 @@ function Dashboard() {
             COICT
           </p>
 
-          {/* ========== HORIZONTAL LAYOUT (Status Cards, Calendar & Clock) ========== */}
+          {/* ========== HORIZONTAL STATUS CARDS ========== */}
           <div className="w-full max-w-6xl mt-8 mb-6">
             <div className="flex flex-wrap gap-4 justify-center items-center">
-              {/* Status Cards */}
               <StatusCard 
                 id="groups" 
-                name="Groups" 
+                name="Total Groups" 
                 count={!loading ? totalGroups : 0} 
                 color="#1a1a1a" 
               />
               
               <StatusCard 
                 id="chats" 
-                name="Chats" 
+                name="Direct Chats" 
                 count={!loading ? directChats : 0} 
                 color="#1a1a1a" 
               />
@@ -132,22 +145,25 @@ function Dashboard() {
                 count={!loading ? totalUnreadMessages : 0} 
                 color="#1a1a1a" 
               />
-
-              {/* Calendar Card */}
-              <div className="flex flex-col items-center p-4 min-w-[300px] ">
-                <div className="w-full">
-                  <Cal />
-                </div>
-              </div>
-
-              {/* Clock Card */}
-              <div className="flex flex-col items-center p-6 min-w-[220px] ">
-                <div className="transform scale-90">
-                  <Watch />
-                </div>
-              </div>
             </div>
           </div>
+
+          {/* ========== MAIN GRID (Calendar & Clock) ========== */}
+          <div className="w-full max-w-6xl mt-6 grid gap-4 justify-items-center grid-cols-1 lg:grid-cols-[280px_1fr] lg:items-start">
+            {/* ----- Clock (Left) ----- */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="-mt-6">
+                <h1 className="text-2xl font-bold font-luckiest-guy text-[#1a1a1a] text-center">Time:</h1>
+                <Watch />
+              </div>
+            </div>
+
+            {/* ----- Calendar Events (Right) ----- */}
+            <div className="w-full">
+              <h1 className="text-2xl font-bold text-start font-luckiest-guy text-[#1a1a1a] mb-4">Calendar:</h1>
+              <Cal />
+            </div>
+          </div>{/* END MAIN GRID */}
 
           {/* ========== DESIGN & VISUALS SECTION (currently hidden) ========== */}
           <div className="flex flex-col justify-center bg-[#1a1a1a] w-full items-center mt-20 mb-20 hidden">

@@ -21,6 +21,7 @@ use ocr::OcrManager;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::sync::{Arc, Mutex};
+use tokio::time::{interval, Duration};
 use screenshots::Screen;
 use crate::commands::zotero::clear_zotero_cache;
 use crate::commands::zotero::get_zotero_stats;
@@ -39,7 +40,6 @@ use crate::commands::zotero::configure_zotero;
 use crate::commands::zotero::init_zotero;
 use crate::tauri::group::open_file;
 use crate::commands::zotero::is_zotero_configured;
-use crate::tauri::user::get_all_user_network_mappings;
 use crate::tauri::ble::{
     get_ble_info,
     get_ble_status,
@@ -81,7 +81,7 @@ pub mod modes;
 // Import individual command modules
 // Note: All Tauri commands are now defined in src/tauri/ modules to avoid conflicts
 use crate::tauri::user::{get_all_users, get_online_users, get_offline_users, user_profile, set_node_profile_tauri};
-use crate::tauri::group::{create_group, create_direct_chat, get_or_create_direct_chat, get_group_info, get_group_list, rename_group, get_pending_invitations, get_new_message_id, invite_user_to_group, reply_to_group_invitation, remove_user_from_group, leave_group, get_messages, send_message, read_file_as_base64, delete_all_group_messages, delete_messages};
+use crate::tauri::group::{create_group, create_direct_chat, get_or_create_direct_chat, get_group_info, get_group_list, rename_group, get_pending_invitations, get_new_message_id, invite_user_to_group, reply_to_group_invitation, remove_user_from_group, leave_group, get_messages, send_message, read_file_as_base64, delete_all_group_messages, delete_messages, get_total_unread_count};
 pub mod str0m;
 pub mod tauri;
 // Import qaul module functions
@@ -971,76 +971,177 @@ async fn get_taxi_vehicles() -> Result<Vec<taxi_service::TaxiVehicle>, String> {
         .map_err(|e| e.to_string())
 }
 
+// Background data sync service
+use crate::window_manager::get_active_window_info;
 
-/// Background data sync service that runs periodically
+/// Background data sync service that periodically fetches data and emits events
 async fn background_data_sync_service(app_handle: AppHandle) {
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
-    let mut last_network_mappings: Option<String> = None;
+    let mut interval = interval(Duration::from_millis(2000)); // Update every 2 seconds (reduced from 500ms)
+    let mut is_focused = true; // Start with focused state
+    let mut consecutive_failures = 0; // Track consecutive failures
     
     loop {
         interval.tick().await;
         
-        // Check for network updates using new network mapping
-        if let Ok(network_mappings_json) = get_all_user_network_mappings().await {
-            if last_network_mappings.as_ref().map_or(true, |last| last != &network_mappings_json) {
-                if let Err(e) = app_handle.emit("neighbors-updated", &network_mappings_json) {
-                    tracing::error!("Failed to emit neighbors-updated event: {}", e);
+        // Check if app is focused by checking if our window is active
+        // Only check focus every other cycle to reduce spam
+        if consecutive_failures < 3 {
+            match get_active_window_info() {
+                Ok(window_info) => {
+                    consecutive_failures = 0; // Reset failure counter on success
+                    
+                    // Check if the active window is our app by looking for common identifiers
+                    let current_is_focused = window_info.title.to_lowercase().contains("knowlia") || 
+                                           window_info.process_name.to_lowercase().contains("knowlia") ||
+                                           window_info.title.to_lowercase().contains("com.knowlia.dev") ||
+                                           window_info.process_name.to_lowercase().contains("knowlia.exe") ||
+                                           window_info.title.to_lowercase().contains("dashboard") ||
+                                           // Fallback: check if it's a Tauri app window
+                                           window_info.process_name.to_lowercase().contains("tauri") ||
+                                           window_info.title.to_lowercase().contains("main") ||
+                                           // If window title is empty or generic, assume we're focused
+                                           window_info.title.is_empty() || 
+                                           window_info.title == "main";
+                    
+                    // Log focus state changes and window info for debugging
+                    if current_is_focused != is_focused {
+                        tracing::info!("Window focus changed - Title: '{}', Process: '{}', Focused: {}", 
+                                      window_info.title, window_info.process_name, current_is_focused);
+                        
+                        if current_is_focused {
+                            tracing::info!("App gained focus, resuming background sync");
+                        } else {
+                            tracing::info!("App lost focus, pausing background sync");
+                        }
+                        is_focused = current_is_focused;
+                    }
+                    
+                    // Only sync when app is focused
+                    if !is_focused {
+                        continue;
+                    }
                 }
-                last_network_mappings = Some(network_mappings_json);
+                Err(e) => {
+                    consecutive_failures += 1;
+                    tracing::warn!("Failed to check window focus ({}): {}", consecutive_failures, e);
+                    
+                    // After 3 consecutive failures, assume we're focused and skip checks for a while
+                    if consecutive_failures >= 3 {
+                        tracing::warn!("Too many focus detection failures, assuming app is focused for 30 seconds");
+                        is_focused = true; // Assume focused to avoid breaking functionality
+                        consecutive_failures = 0; // Reset counter
+                        
+                        // Skip focus checks for 15 cycles (30 seconds)
+                        for _ in 0..15 {
+                            interval.tick().await;
+                        }
+                    }
+                }
             }
-        } else {
-            tracing::error!("Failed to fetch network mappings in background service");
         }
         
-        // Fetch all users
-        if let Ok(users_json) = get_all_users().await {
-            if let Err(e) = app_handle.emit("users-updated", &users_json) {
-                tracing::error!("Failed to emit users-updated event: {}", e);
+        // Fetch total unread count
+        match crate::tauri::group::get_total_unread_count().await {
+            Ok(count) => {
+                if let Err(e) = app_handle.emit("total_unread_count_updated", count) {
+                    tracing::error!("Failed to emit total_unread_count_updated: {}", e);
+                } else {
+                    tracing::debug!("Emitted total_unread_count_updated: {}", count);
+                }
             }
-        } else {
-            tracing::error!("Failed to fetch users in background service");
+            Err(e) => {
+                tracing::error!("Failed to fetch total unread count: {}", e);
+            }
         }
         
-        // Fetch all groups and serialize to JSON
-        if let Ok(groups) = get_group_list().await {
-            if let Ok(groups_json) = serde_json::to_string(&groups) {
-                tracing::debug!("Groups JSON: {}", groups_json);
-                if let Err(e) = app_handle.emit("groups-updated", &groups_json) {
-                    tracing::error!("Failed to emit groups-updated event: {}", e);
+        // Fetch user profile
+        match crate::tauri::user::user_profile().await {
+            Ok(profile) => {
+                if let Err(e) = app_handle.emit("user_profile_updated", profile) {
+                    tracing::error!("Failed to emit user_profile_updated: {}", e);
+                } else {
+                    tracing::debug!("Emitted user_profile_updated");
                 }
-            } else {
-                tracing::error!("Failed to serialize groups to JSON");
             }
-        } else {
-            tracing::error!("Failed to fetch groups in background service");
+            Err(e) => {
+                tracing::error!("Failed to fetch user profile: {}", e);
+            }
         }
         
-        // Fetch pending invitations and serialize to JSON
-        if let Ok(invitations) = get_pending_invitations().await {
-            if let Ok(invitations_json) = serde_json::to_string(&invitations) {
-                if let Err(e) = app_handle.emit("invitations-updated", &invitations_json) {
-                    tracing::error!("Failed to emit invitations-updated event: {}", e);
+        // Fetch network stats
+        match crate::tauri::qaul::get_network_stats() {
+            Ok(stats) => {
+                if let Err(e) = app_handle.emit("network_stats_updated", stats) {
+                    tracing::error!("Failed to emit network_stats_updated: {}", e);
+                } else {
+                    tracing::debug!("Emitted network_stats_updated");
                 }
-            } else {
-                tracing::error!("Failed to serialize invitations to JSON");
             }
-        } else {
-            tracing::error!("Failed to fetch invitations in background service");
+            Err(e) => {
+                tracing::error!("Failed to fetch network stats: {}", e);
+            }
         }
         
-        // Fetch taxi vehicles and emit update
-        if let Ok(taxis) = get_taxi_vehicles().await {
-            if let Ok(taxis_json) = serde_json::to_string(&taxis) {
-                if let Err(e) = app_handle.emit("taxis-updated", &taxis_json) {
-                    tracing::error!("Failed to emit taxis-updated event: {}", e);
+        // Fetch internet neighbours
+        match crate::tauri::qaul::get_internet_neighbours_ui_command() {
+            Ok(neighbours) => {
+                if let Err(e) = app_handle.emit("internet_neighbours_updated", &neighbours) {
+                    tracing::error!("Failed to emit internet_neighbours_updated: {}", e);
+                } else {
+                    tracing::debug!("Emitted internet_neighbours_updated: {} neighbours", neighbours.len());
                 }
-            } else {
-                tracing::error!("Failed to serialize taxis to JSON");
             }
-        } else {
-            tracing::error!("Failed to fetch taxis in background service");
+            Err(e) => {
+                tracing::error!("Failed to fetch internet neighbours: {}", e);
+            }
+        }
+        
+        // Fetch all groups for dashboard
+        match get_group_list().await {
+            Ok(groups) => {
+                match serde_json::to_string(&groups) {
+                    Ok(groups_json) => {
+                        if let Err(e) = app_handle.emit("groups-updated", &groups_json) {
+                            tracing::error!("Failed to emit groups-updated: {}", e);
+                        } else {
+                            tracing::debug!("Emitted groups-updated: {} groups", groups.len());
+                        }
+                    }
+                    Err(e) => {
+                        tracing::error!("Failed to serialize groups to JSON: {}", e);
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch groups: {}", e);
+            }
         }
     }
+}
+
+/// Start the background data sync service
+#[tauri_crate::command]
+async fn start_background_data_sync_service(app_handle: AppHandle) -> Result<(), String> {
+    tracing::info!("Starting background data sync service with focus detection");
+    
+    // Log that we're starting the service
+    tracing::info!("Spawning background data sync service task");
+    
+    tauri_crate::async_runtime::spawn(async move {
+        background_data_sync_service(app_handle).await;
+    });
+    
+    tracing::info!("Background data sync service started successfully");
+    Ok(())
+}
+
+/// Stop the background data sync service (for manual control)
+#[tauri_crate::command]
+async fn stop_background_data_sync_service() -> Result<(), String> {
+    tracing::info!("Background data sync service stop requested");
+    // Note: This is a placeholder for future implementation
+    // The actual service will detect focus and pause automatically
+    Ok(())
 }
 
 #[cfg_attr(mobile, mobile_entry_point)]
@@ -1058,40 +1159,40 @@ pub fn run() {
         last_auth_check: Arc::new(Mutex::new(std::time::Instant::now())),
     };
 
-    // Initialize session state
-    let session_state = Arc::new(Mutex::new(std::collections::HashMap::<String, String>::new()));
-    
+    // Create session state
+    let session_state = Arc::new(Mutex::new(None::<String>));
+
     // Build the Tauri application
     Builder::default()
-        .manage(session_state)
-        .manage(EmbeddingManager::new())
-        .manage(OcrManager::new())
-        .manage(ZoteroState::new())
-        .manage(app_state)
-        .manage(timetable::DbState::default())
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_media::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_notification::init())
-        .plugin(tauri_plugin_cache::init())
-        .plugin(crate::tauri::qaul::init())
-        .setup(|app: &mut App| {
-            let app_handle = app.handle();
-            let app_dir = app.path().app_data_dir()?;
-            
-            // Initialize database pool first, before any database operations
-            sql::init(app)?;
-            
-            // Initialize task store (path is hardcoded in task.rs)
-            match crate::tauri::task::init_task_store() {
-                Ok(store) => {
-                    log::info!("Task store initialized successfully");
-                    app.manage(store);
-                }
-                Err(e) => {
-                    log::error!("Failed to initialize task store: {}", e);
-                }
+    .manage(session_state)
+    .manage(EmbeddingManager::new())
+    .manage(OcrManager::new())
+    .manage(ZoteroState::new())
+    .manage(app_state)
+    .manage(timetable::DbState::default())
+    .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_media::init())
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_notification::init())
+    .plugin(tauri_plugin_cache::init())
+    .plugin(crate::tauri::qaul::init())
+    .setup(|app: &mut App| {
+        let app_handle = app.handle();
+        let app_dir = app.path().app_data_dir()?;
+        
+        // Initialize database pool first, before any database operations
+        sql::init(app)?;
+        
+        // Initialize task store (path is hardcoded in task.rs)
+        match crate::tauri::task::init_task_store() {
+            Ok(store) => {
+                log::info!("Task store initialized successfully");
+                app.manage(store);
             }
+            Err(e) => {
+                log::error!("Failed to initialize task store: {}", e);
+            }
+        }
             
             // Initialize MEGA state
             app.manage(crate::tauri::mega::MegaState::default());
@@ -1237,6 +1338,8 @@ pub fn run() {
             background_tasks::stop_all_background_tasks,
             background_tasks::manage_background_tasks,
             background_tasks::get_background_tasks_status,
+            start_background_data_sync_service,
+            stop_background_data_sync_service,
             // contextual bandit
             cb_manager::get_choosen_arm_from_user_intention_id,
             cb_manager::get_bandit_stats,
@@ -1313,6 +1416,7 @@ pub fn run() {
             crate::tauri::user::convert_peer_id_to_q8id,
             crate::tauri::user::convert_q8id_to_peer_id,
             crate::tauri::qaul::get_network_stats,
+            get_total_unread_count,
             // BLE commands
             get_ble_info,
             get_ble_status,

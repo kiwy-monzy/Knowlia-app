@@ -21,11 +21,11 @@ interface SystemMonitorProps {
 }
 
 export default function SystemMonitor({ compact }: SystemMonitorProps) {
-  const { networkStats: stats } = useSite();
   const [internetNeighbours, setInternetNeighbours] = useState<InternetNeighbourInfo[]>([]);
+  const { networkStats } = useSite();
 
-  const latency = stats && typeof stats.latency_ms === 'number' ? stats.latency_ms : undefined;
-  const isOnline = stats?.is_online ?? true;
+  const latency = networkStats && typeof networkStats.latency_ms === 'number' ? networkStats.latency_ms : undefined;
+  const isOnline = networkStats?.is_online ?? true;
 
   // Fetch internet neighbours data
   useEffect(() => {
@@ -46,10 +46,10 @@ export default function SystemMonitor({ compact }: SystemMonitorProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const gatewayName = stats?.gateway_name || 'Internet gateway';
-  const gatewayAddr = stats?.gateway_addr;
-  const gatewayLatency = stats && typeof stats.gateway_latency_ms === 'number' ? stats.gateway_latency_ms : undefined;
-  const gatewayOnline = stats?.gateway_online ?? isOnline;
+  const gatewayName = networkStats?.gateway_name || 'Internet gateway';
+  const gatewayAddr = networkStats?.gateway_addr;
+  const gatewayLatency = networkStats && typeof networkStats.gateway_latency_ms === 'number' ? networkStats.gateway_latency_ms : undefined;
+  const gatewayOnline = networkStats?.gateway_online ?? isOnline;
 
   const latencyColor = useMemo(() => {
     if (typeof latency !== 'number') return 'text-gray-400';
