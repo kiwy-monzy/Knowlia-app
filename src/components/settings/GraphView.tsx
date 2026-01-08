@@ -90,13 +90,76 @@ const GraphView: FC = () => {
     const fetchNetworkUsers = useCallback(async () => {
         try {
             setLoading(true);
+            console.log('Attempting to fetch network users...');
             const usersJson = await invoke<string>('get_all_users');
-            const users: NetworkUser[] = JSON.parse(usersJson);
+            console.log('Raw response from backend:', usersJson);
+            
+            let users: NetworkUser[];
+            try {
+                users = JSON.parse(usersJson);
+                console.log('Parsed users:', users);
+                console.log('Number of users:', users.length);
+                
+                // If no users from backend, create some mock data for testing
+                if (users.length === 0) {
+                    console.log('No users from backend, creating mock data for testing...');
+                    users = [
+                        {
+                            peer_id: "12D3KooWTest1234567890123456789012345678901234567890123456789",
+                            q8id: "TestQ8ID123",
+                            name: "Test User 1",
+                            is_online: true,
+                            connections: [
+                                { module: 2, via_node: "relay1", hop_count: 1, rtt: 50000 },
+                                { module: 1, via_node: "relay2", hop_count: 1, rtt: 30000 }
+                            ]
+                        },
+                        {
+                            peer_id: "12D3KooWTest0987654321098765432109876543210987654321098765432",
+                            q8id: "TestQ8ID456", 
+                            name: "Test User 2",
+                            is_online: false,
+                            connections: []
+                        }
+                    ];
+                    console.log('Created mock users:', users);
+                }
+                
+                // Log each user's details
+                users.forEach((user, index) => {
+                    console.log(`User ${index + 1}:`, {
+                        name: user.name,
+                        peer_id: user.peer_id,
+                        q8id: user.q8id,
+                        is_online: user.is_online,
+                        connections: user.connections.length
+                    });
+                });
+            } catch (parseError) {
+                console.error('Failed to parse JSON response:', parseError);
+                console.log('Response that failed to parse:', usersJson);
+                users = [];
+            }
+            
             setNetworkUsers(users);
-            console.log('Fetched network users:', users);
         } catch (error) {
             console.error('Failed to fetch network users:', error);
-            setNetworkUsers([]);
+            console.error('Error details:', error);
+            
+            // Set mock data on error as well for testing
+            const mockUsers: NetworkUser[] = [
+                {
+                    peer_id: "12D3KooWError1234567890123456789012345678901234567890123456789",
+                    q8id: "ErrorQ8ID123",
+                    name: "Error Test User",
+                    is_online: true,
+                    connections: [
+                        { module: 2, via_node: "relay1", hop_count: 1, rtt: 50000 }
+                    ]
+                }
+            ];
+            console.log('Setting mock data due to error:', mockUsers);
+            setNetworkUsers(mockUsers);
         } finally {
             setLoading(false);
         }
@@ -157,16 +220,27 @@ const GraphView: FC = () => {
 
     // Transform network users into graph format
     useEffect(() => {
+        console.log('Transforming network users to graph format...');
+        console.log('Current networkUsers:', networkUsers);
+        
         const nodes: GraphNode[] = [];
         const links: GraphLink[] = [];
         const relayNodes = new Set<string>();
         
+        if (networkUsers.length === 0) {
+            console.log('No network users to transform');
+            setGraphData({ nodes: [], links: [] });
+            return;
+        }
+        
         // First pass: collect all unique node IDs and create user nodes
-        networkUsers.forEach((user) => {
+        networkUsers.forEach((user, userIndex) => {
+            console.log(`Processing user ${userIndex + 1}/${networkUsers.length}:`, user.name);
+            
             // Add user node
             const userColor = user.is_online ? getNodeColorForUser(user) : '#9ca3af';
             
-            nodes.push({
+            const graphNode: GraphNode = {
                 id: user.peer_id,
                 name: user.name || 'Unknown User',
                 peer_id: user.peer_id,
@@ -176,19 +250,25 @@ const GraphView: FC = () => {
                 connections: user.connections.map(c => c.module),
                 val: 1 + (user.connections.length * 0.3), // Size based on connections
                 color: userColor
-            });
+            };
+            
+            console.log('Created graph node:', graphNode);
+            nodes.push(graphNode);
             
             // Collect relay nodes from connections
             user.connections.forEach(conn => {
                 if (conn.via_node) {
                     relayNodes.add(conn.via_node);
+                    console.log('Found relay node:', conn.via_node);
                 }
             });
         });
         
+        console.log('Relay nodes found:', Array.from(relayNodes));
+        
         // Second pass: create relay nodes
         relayNodes.forEach(relayId => {
-            nodes.push({
+            const relayNode: GraphNode = {
                 id: relayId,
                 name: 'Relay Node',
                 peer_id: relayId,
@@ -198,7 +278,8 @@ const GraphView: FC = () => {
                 connections: [],
                 val: 0.5, // Smaller size for relay nodes
                 color: '#6b7280'
-            });
+            };
+            nodes.push(relayNode);
         });
         
         // Third pass: create links
@@ -206,18 +287,22 @@ const GraphView: FC = () => {
             user.connections.forEach((connection) => {
                 if (connection.via_node) {
                     const linkColor = getLinkColor(connection.module);
-                    links.push({
+                    const link: GraphLink = {
                         source: user.peer_id,
                         target: connection.via_node,
                         color: linkColor,
                         module: connection.module,
                         animated: user.is_online
-                    });
+                    };
+                    links.push(link);
                 }
             });
         });
         
-        console.log(`Created graph with ${nodes.length} nodes and ${links.length} links`);
+        console.log(`Final graph data: ${nodes.length} nodes and ${links.length} links`);
+        console.log('Nodes:', nodes);
+        console.log('Links:', links);
+        
         setGraphData({ nodes, links });
     }, [networkUsers]);
 
@@ -298,6 +383,26 @@ const GraphView: FC = () => {
                         className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors text-sm"
                     >
                         Refresh
+                    </button>
+                    <button
+                        onClick={() => console.log('Current state:', { networkUsers, graphData, loading })}
+                        className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors text-sm"
+                    >
+                        Debug
+                    </button>
+                    <button
+                        onClick={async () => {
+                            try {
+                                console.log('Manually triggering network update...');
+                                await invoke('trigger_network_users_update');
+                                console.log('Network update triggered successfully');
+                            } catch (error) {
+                                console.error('Failed to trigger network update:', error);
+                            }
+                        }}
+                        className="px-3 py-1 bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors text-sm"
+                    >
+                        Trigger Update
                     </button>
                 </div>
             </div>

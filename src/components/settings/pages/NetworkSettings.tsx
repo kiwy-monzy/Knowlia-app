@@ -63,14 +63,7 @@ const getConnectionColor = (user: UserConnection): string => {
   return '#6b7280';
 };
 
-const getInitials = (name: string): string => {
-  return name
-    .split(' ')
-    .map(word => word.charAt(0))
-    .join('')
-    .substring(0, 2)
-    .toUpperCase();
-};
+
 
 // ==================== MAIN NETWORK SETTINGS COMPONENT ====================
 

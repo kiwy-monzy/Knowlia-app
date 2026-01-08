@@ -134,14 +134,14 @@ function Dashboard() {
               />
 
               {/* Calendar Card */}
-              <div className="flex flex-col items-center p-4 min-w-[300px] ">
+              <div className="flex flex-col items-center">
                 <div className="w-full">
                   <Cal />
                 </div>
               </div>
 
               {/* Clock Card */}
-              <div className="flex flex-col items-center p-6 min-w-[220px] ">
+              <div className="flex flex-col items-center">
                 <div className="transform scale-90">
                   <Watch />
                 </div>

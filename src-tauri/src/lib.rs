@@ -1096,6 +1096,20 @@ async fn background_data_sync_service(app_handle: AppHandle) {
             }
         }
         
+        // Fetch all network users for graph view
+        match get_all_users().await {
+            Ok(users_json) => {
+                if let Err(e) = app_handle.emit("neighbors-updated", &users_json) {
+                    tracing::error!("Failed to emit neighbors-updated: {}", e);
+                } else {
+                    tracing::debug!("Emitted neighbors-updated event");
+                }
+            }
+            Err(e) => {
+                tracing::error!("Failed to fetch network users for update: {}", e);
+            }
+        }
+        
         // Fetch all groups for dashboard
         match get_group_list().await {
             Ok(groups) => {
@@ -1133,6 +1147,28 @@ async fn start_background_data_sync_service(app_handle: AppHandle) -> Result<(),
     
     tracing::info!("Background data sync service started successfully");
     Ok(())
+}
+
+/// Manual trigger for network users update (for testing)
+#[tauri_crate::command]
+async fn trigger_network_users_update(app_handle: AppHandle) -> Result<(), String> {
+    tracing::info!("Manual trigger for network users update");
+    
+    match get_all_users().await {
+        Ok(users_json) => {
+            if let Err(e) = app_handle.emit("neighbors-updated", &users_json) {
+                tracing::error!("Failed to emit neighbors-updated: {}", e);
+                Err(format!("Failed to emit event: {}", e))
+            } else {
+                tracing::info!("Successfully emitted neighbors-updated event");
+                Ok(())
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to fetch network users: {}", e);
+            Err(format!("Failed to fetch users: {}", e))
+        }
+    }
 }
 
 /// Stop the background data sync service (for manual control)
@@ -1340,6 +1376,7 @@ pub fn run() {
             background_tasks::get_background_tasks_status,
             start_background_data_sync_service,
             stop_background_data_sync_service,
+            trigger_network_users_update,
             // contextual bandit
             cb_manager::get_choosen_arm_from_user_intention_id,
             cb_manager::get_bandit_stats,

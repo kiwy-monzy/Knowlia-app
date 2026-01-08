@@ -6887,6 +6887,7 @@ dependencies = [
  "qaul_info",
  "qaul_messaging",
  "rand 0.9.2",
+ "retry",
  "semver 1.0.27",
  "serde",
  "serde_json",
@@ -6896,6 +6897,7 @@ dependencies = [
  "sled",
  "state",
  "str0m",
+ "sysinfo",
  "toml 0.9.10+spec-1.1.0",
  "tracing",
  "uuid",
@@ -10087,6 +10089,15 @@ name = "resolv-conf"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e061d1b48cb8d38042de4ae0a7a6401009d6143dc80d2e2d6f31f0bdd6470c7"
+
+[[package]]
+name = "retry"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1e211f878258887b3e65dd3c8ff9f530fe109f441a117ee0cdc27f341355032"
+dependencies = [
+ "rand 0.9.2",
+]
 
 [[package]]
 name = "rfc6979"
