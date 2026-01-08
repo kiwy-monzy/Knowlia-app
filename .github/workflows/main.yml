@@ -1,8 +1,5 @@
-name: Build and Release
-on:
-  push:
-    tags:
-      - 'v*'
+name: Build MSI
+on: [push]
 jobs:
   build:
     runs-on: windows-latest
