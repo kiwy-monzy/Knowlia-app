@@ -8,15 +8,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+      
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
       
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
+        run: pnpm install --no-frozen-lockfile
       
       - name: Build Tauri app
-        run: npm run tauri build
+        run: pnpm tauri build
       
       - name: Upload MSI artifact
         uses: actions/upload-artifact@v4
@@ -31,4 +39,4 @@ jobs:
         with:
           files: src-tauri/target/release/bundle/msi/*.msi
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
