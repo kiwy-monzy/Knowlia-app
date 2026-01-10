@@ -90,7 +90,7 @@ fn decode_peer_ids_in_value(value: &mut Value) {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn download_qaul_file(file_id: String, file_name: String) -> Result<String, String> {
     // Get downloads directory
     let downloads_dir =
@@ -121,7 +121,7 @@ pub async fn download_qaul_file(file_id: String, file_name: String) -> Result<St
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn open_qaul_file(file_path: String) -> Result<(), String> {
     // Check if file exists
     if !PathBuf::from(&file_path).exists() {
@@ -156,7 +156,7 @@ pub async fn open_qaul_file(file_path: String) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn check_qaul_file_downloaded(file_name: String) -> Result<bool, String> {
     let downloads_dir =
         dirs::download_dir().ok_or_else(|| "Could not find downloads directory".to_string())?;
@@ -167,7 +167,7 @@ pub async fn check_qaul_file_downloaded(file_name: String) -> Result<bool, Strin
     Ok(file_path.exists())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_qaul_file_path(_file_id: String, file_name: String) -> Result<String, String> {
     let downloads_dir =
         dirs::download_dir().ok_or_else(|| "Could not find downloads directory".to_string())?;
@@ -182,7 +182,7 @@ pub async fn get_qaul_file_path(_file_id: String, file_name: String) -> Result<S
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn start_file_download(
     file_id: u64,
     file_name: String,
@@ -231,7 +231,7 @@ pub async fn start_file_download(
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_download_progress(file_id: u64) -> Result<String, String> {
     // Get file download progress from qaul_cli
     match qaul_cli::get_download_progress(file_id) {
@@ -249,13 +249,13 @@ pub async fn get_download_progress(file_id: u64) -> Result<String, String> {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_file_path(file_id: u64) -> Result<String, String> {
     // Get file path from qaul_cli
     qaul_cli::get_file_path(file_id)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn check_file_in_downloads(file_name: String) -> Result<Option<String>, String> {
     // Get the Downloads directory
     let downloads_dir = dirs::download_dir()
@@ -272,7 +272,7 @@ pub async fn check_file_in_downloads(file_name: String) -> Result<Option<String>
 }
 
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_discovered_users() -> Result<Value, String> {
     // Get comprehensive user discovery information
     let users = qaul_cli::get_all_discovered_users()
@@ -281,7 +281,7 @@ pub async fn get_all_discovered_users() -> Result<Value, String> {
     Ok(users)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_network_info() -> Result<Value, String> {
     // Get real-time internet neighbour information
     let internet_neighbours = qaul_cli::get_internet_neighbours()
@@ -391,7 +391,7 @@ pub async fn start_network_info_emitter(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn send_channel_message(group_name: String, message: String) -> Result<Value, String> {
     // Use HTTP POST to send channel message to network node API
     let client = reqwest::Client::new();
@@ -426,14 +426,14 @@ pub async fn send_channel_message(group_name: String, message: String) -> Result
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn request_group_list() -> Result<(), String> {
     // use crate::qaul::group::Group;
     //Group::group_list();
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn request_group_messages(group_id: String) -> Result<(), String> {
     //use crate::qaul::chat::Chat;
 

@@ -25,13 +25,13 @@ pub fn convert_date_str_to_utc(date_str: &str) -> Result<DateTime<Utc>, rusqlite
     Ok(created_at)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_global_config() -> Result<model::GlobalConfig, String> {
     let config = get_config()?;
     Ok(config)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_window_info_by_pid(
     pid: u32,
     limit: u32,
@@ -40,7 +40,7 @@ pub async fn get_window_info_by_pid(
         .map_err(|e| format!("Failed to get window info: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_apps() -> Result<Vec<model::AppData>, String> {
     let end_time = Utc::now();
     let start_time = end_time - Duration::days(30);
@@ -48,7 +48,7 @@ pub async fn get_all_apps() -> Result<Vec<model::AppData>, String> {
         .map_err(|e| format!("Failed to get all apps: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_apps_by_time_range(hours: i64) -> Result<Vec<model::AppData>, String> {
     let end_time = Utc::now();
     let start_time = end_time - Duration::hours(hours);
@@ -56,7 +56,7 @@ pub async fn get_apps_by_time_range(hours: i64) -> Result<Vec<model::AppData>, S
         .map_err(|e| format!("Failed to get apps by time range: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_window_info_by_pid_and_time(
     pid: u32,
     limit: u32,

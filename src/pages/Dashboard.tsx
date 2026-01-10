@@ -6,7 +6,6 @@ import FollowPathCanvas from "@/components/home/FollowPathCanvas";
 import Watch from "@/components/home/Watch";
 import { useState, useEffect } from "react";
 import { useChatContext } from "@/contexts/ChatContext";
-import { invoke } from '@tauri-apps/api/core';
 import NewsCard from '@/components/home/NewsCard';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import React from "react";
@@ -41,26 +40,17 @@ function Dashboard() {
   // Focus state tracking
   const [isAppFocused, setIsAppFocused] = useState(true);
 
-  // Debug logging to track real-time updates
-  useEffect(() => {
-    console.log('Dashboard data updated:', {
-      totalGroups,
-      directChats,
-      totalUnreadMessages,
-      loading
-    });
-  }, [totalGroups, directChats, totalUnreadMessages, loading]);
 
   // Track app focus/blur events
   useEffect(() => {
     const handleFocus = () => {
       setIsAppFocused(true);
-      console.log('App gained focus - background sync active');
+      //console.log('App gained focus - background sync active');
     };
 
     const handleBlur = () => {
       setIsAppFocused(false);
-      console.log('App lost focus - background sync paused');
+      //console.log('App lost focus - background sync paused');
     };
 
     window.addEventListener('focus', handleFocus);
@@ -72,20 +62,7 @@ function Dashboard() {
     };
   }, []);
 
-  // Start background data sync service
-  useEffect(() => {
-    const startBackgroundService = async () => {
-      try {
-        await invoke('start_background_data_sync_service');
-        console.log('Background data sync service started');
-      } catch (error) {
-        console.error('Failed to start background data sync service:', error);
-      }
-    };
-    
-    startBackgroundService();
-  }, []);
-
+  
   // News fetching logic using the same pattern as SiteContext, inlined here
   const [news, setUdsmNews] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);

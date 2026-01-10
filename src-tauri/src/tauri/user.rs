@@ -30,7 +30,7 @@ pub struct UserList {
 }
 
 /// Get all users (both online and offline) - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_users() -> Result<String, String> {
     // Get all users from the users store
     let users = USERS.get().read().unwrap();
@@ -76,7 +76,7 @@ pub async fn get_all_users() -> Result<String, String> {
 }
 
 /// Get online users - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_online_users() -> Result<String, String> {
     match RoutingTable::get_online_users() {
         json_string => Ok(json_string),
@@ -84,7 +84,7 @@ pub async fn get_online_users() -> Result<String, String> {
 }
 
 /// Get offline users - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_offline_users() -> Result<String, String> {
     match RoutingTable::get_offline_users() {
         json_string => Ok(json_string),
@@ -92,7 +92,7 @@ pub async fn get_offline_users() -> Result<String, String> {
 }
 
 /// Get current user profile
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn user_profile() -> Result<String, String> {
     // Get the current user account
     match UserAccounts::get_default_user() {
@@ -120,7 +120,7 @@ pub async fn user_profile() -> Result<String, String> {
 }
 
 /// Update current user profile
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn set_node_profile_tauri(name: String, college: String, reg_no: String, profile: String, about: String) -> Result<(), String> {
     info!("set_node_profile_tauri called with name: {}, college: {}, reg_no: {}", name, college, reg_no);
     
@@ -163,7 +163,7 @@ pub async fn set_node_profile_tauri(name: String, college: String, reg_no: Strin
 
 
 /// Get network mapping for a specific user by peer ID
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_user_network_mapping(peer_id: String) -> Result<String, String> {
     match network::get_user_mapping(&peer_id) {
         Some(mapping) => Ok(serde_json::to_string(&mapping).unwrap()),
@@ -172,14 +172,14 @@ pub async fn get_user_network_mapping(peer_id: String) -> Result<String, String>
 }
 
 /// Get network mapping for all users
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_user_network_mappings() -> Result<String, String> {
     let mappings = network::get_all_user_mappings();
     Ok(serde_json::to_string(&mappings).unwrap())
 }
 
 /// Get routing information for a specific user
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_user_routing_info(peer_id: String) -> Result<String, String> {
     match network::get_user_routing(&peer_id) {
         Some(routing) => Ok(serde_json::json!({
@@ -195,7 +195,7 @@ pub async fn get_user_routing_info(peer_id: String) -> Result<String, String> {
 }
 
 /// Get public key for a user by peer ID
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_user_public_key(peer_id: String) -> Result<String, String> {
     match network::get_user_public_key(&peer_id) {
         Some(key) => Ok(key),
@@ -204,21 +204,21 @@ pub async fn get_user_public_key(peer_id: String) -> Result<String, String> {
 }
 
 /// Get online users with network mapping
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_online_user_mappings() -> Result<String, String> {
     let mappings = network::get_online_users();
     Ok(serde_json::to_string(&mappings).unwrap())
 }
 
 /// Get offline users with network mapping
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_offline_user_mappings() -> Result<String, String> {
     let mappings = network::get_offline_users();
     Ok(serde_json::to_string(&mappings).unwrap())
 }
 
 /// Convert peer ID to q8id
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn convert_peer_id_to_q8id(peer_id: String) -> Result<String, String> {
     match network::peer_id_to_q8id(&peer_id) {
         Some(q8id) => Ok(q8id),
@@ -227,7 +227,7 @@ pub async fn convert_peer_id_to_q8id(peer_id: String) -> Result<String, String> 
 }
 
 /// Convert q8id to peer ID
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn convert_q8id_to_peer_id(q8id: String) -> Result<String, String> {
     match network::q8id_to_peer_id(&q8id) {
         Some(peer_id) => Ok(peer_id),

@@ -56,7 +56,7 @@ impl BleState {
 }
 
 /// Get BLE device information
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_ble_info() -> Result<BleDeviceInfo, String> {
     // Return default device info for now
     let device_info = BleDeviceInfo {
@@ -79,7 +79,7 @@ pub async fn get_ble_info() -> Result<BleDeviceInfo, String> {
 }
 
 /// Get current BLE status
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_ble_status() -> Result<BleStatus, String> {
     let state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
     let discovered_count = state.discovered_devices.len();
@@ -96,7 +96,7 @@ pub async fn get_ble_status() -> Result<BleStatus, String> {
 }
 
 /// Start BLE module
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn start_ble() -> Result<String, String> {
     // Update state
     {
@@ -111,7 +111,7 @@ pub async fn start_ble() -> Result<String, String> {
 }
 
 /// Stop BLE module
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn stop_ble() -> Result<String, String> {
     // Update state
     {
@@ -127,7 +127,7 @@ pub async fn stop_ble() -> Result<String, String> {
 }
 
 /// Get discovered BLE devices
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_discovered_devices() -> Result<Vec<DiscoveredDevice>, String> {
     // Return current discovered devices
     let state = BleState::get().lock().map_err(|e| format!("Failed to acquire lock: {}", e))?;
@@ -136,14 +136,14 @@ pub async fn get_discovered_devices() -> Result<Vec<DiscoveredDevice>, String> {
 }
 
 /// Request BLE permissions (for platforms that require it)
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn request_ble_permissions() -> Result<bool, String> {
     // For now, just return true - actual permission handling would be platform-specific
     Ok(true)
 }
 
 /// Send direct message to BLE device
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn send_ble_message(
     device_id: String,
     message_data: Vec<u8>,

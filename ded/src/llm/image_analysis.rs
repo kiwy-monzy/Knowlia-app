@@ -22,7 +22,7 @@ struct AnalysisResult {
     category: String,
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn take_screenshot(
     app_handle: AppHandle,
     screen_type: String,

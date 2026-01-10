@@ -436,17 +436,17 @@ pub fn restart_bandit() -> Result<(), String> {
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_bandit_stats() -> Result<Vec<sql::model::BanditStat>, String> {
     sql::queries::get_all_bandit_stats().map_err(|e| format!("Failed to get bandit stats: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub fn restart_contextual_bandit() -> Result<(), String> {
     restart_bandit()
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_choosen_arm_from_user_intention_id(
     app_handle: tauri::AppHandle,
     user_intention_id: i64,

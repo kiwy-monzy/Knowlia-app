@@ -55,7 +55,7 @@ pub type GroupResult<T> = Result<T, String>;
 /// # Returns
 /// * `Ok(group_id)` - The ID of the newly created group
 /// * `Err(error)` - Error message if creation fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn create_group(name: String) -> GroupResult<Vec<u8>> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -73,7 +73,7 @@ pub async fn create_group(name: String) -> GroupResult<Vec<u8>> {
 /// # Returns
 /// * `Ok(group_id_hex)` - The hex encoded group ID
 /// * `Err(error)` - Error message if creation fails
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_or_create_direct_chat(contact_id: String) -> Result<String, String> {
     use libp2p::PeerId;
     use libqaul::services::group::GroupManage;
@@ -107,7 +107,7 @@ pub fn get_or_create_direct_chat(contact_id: String) -> Result<String, String> {
 /// * `Ok(group)` - The created or retrieved direct chat group
 /// * `Err(error)` - Error message if creation fails
 #[allow(dead_code)]
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn create_direct_chat(remote_user_id: String) -> GroupResult<GroupInfo> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -136,7 +136,7 @@ pub async fn create_direct_chat(remote_user_id: String) -> GroupResult<GroupInfo
 /// # Returns
 /// * `Ok(group_info)` - Detailed information about the group
 /// * `Err(error)` - Error message if retrieval fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_group_info(group_id: String) -> GroupResult<GroupInfo> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -154,7 +154,7 @@ pub async fn get_group_info(group_id: String) -> GroupResult<GroupInfo> {
 /// # Returns
 /// * `Ok(groups)` - List of all groups
 /// * `Err(error)` - Error message if retrieval fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_group_list() -> GroupResult<Vec<GroupInfo>> {
     match get_current_user_internal() {
         Some(current_user) => {
@@ -254,7 +254,7 @@ pub async fn get_group_list() -> GroupResult<Vec<GroupInfo>> {
 /// # Returns
 /// * `Ok(())` - Group renamed successfully
 /// * `Err(error)` - Error message if rename fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn rename_group(group_id: String, new_name: String) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -273,7 +273,7 @@ pub async fn rename_group(group_id: String, new_name: String) -> GroupResult<()>
 /// # Returns
 /// * `Ok(invitations)` - List of pending invitations
 /// * `Err(error)` - Error message if retrieval fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_pending_invitations() -> GroupResult<Vec<GroupInvitation>> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -295,7 +295,7 @@ pub async fn get_pending_invitations() -> GroupResult<Vec<GroupInvitation>> {
 /// # Returns
 /// * `Ok(message_id)` - New message ID
 /// * `Err(error)` - Error message if generation fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_new_message_id(group_id: String) -> GroupResult<Vec<u8>> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -732,7 +732,7 @@ impl From<libqaul::services::group::Group> for GroupInfo {
 /// # Returns
 /// * `Ok(())` - User invited successfully
 /// * `Err(error)` - Error message if invitation fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn invite_user_to_group(group_id: String, user_id: String) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -758,7 +758,7 @@ pub async fn invite_user_to_group(group_id: String, user_id: String) -> GroupRes
 /// # Returns
 /// * `Ok(())` - Reply sent successfully
 /// * `Err(error)` - Error message if reply fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn reply_to_group_invitation(group_id: String, accept: bool) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
 
@@ -780,7 +780,7 @@ pub async fn reply_to_group_invitation(group_id: String, accept: bool) -> GroupR
 /// # Returns
 /// * `Ok(())` - User removed successfully
 /// * `Err(error)` - Error message if removal fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn remove_user_from_group(group_id: String, user_id: String) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
     let account_id = current_user.id;
@@ -804,7 +804,7 @@ pub async fn remove_user_from_group(group_id: String, user_id: String) -> GroupR
 /// # Returns
 /// * `Ok(())` - Successfully left the group
 /// * `Err(error)` - Error message if leaving fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn leave_group(group_id: String) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
     let account_id = current_user.id;
@@ -902,7 +902,7 @@ fn get_group_files(group_id: &[u8]) -> Vec<FileHistory> {
 /// # Returns
 /// * `Ok(())` - File opened successfully
 /// * `Err(error)` - Error message if opening fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn open_file(file_path: String) -> Result<(), String> {
     use std::process::Command;
     
@@ -958,7 +958,7 @@ pub async fn open_file(file_path: String) -> Result<(), String> {
 /// # Returns
 /// * `Ok(json)` - JSON string containing messages and files
 /// * `Err(error)` - Error message if retrieval fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_messages(group_id: String) -> Result<String, String> {
     // Get current peer ID
     let peer_id = match get_current_user_internal() {
@@ -1105,7 +1105,7 @@ pub async fn get_messages(group_id: String) -> Result<String, String> {
 /// # Returns
 /// * `Ok(())` - Message sent successfully
 /// * `Err(error)` - Error message if sending fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn send_message(
     group_id: String,
     message: Option<String>,
@@ -1249,7 +1249,7 @@ async fn send_file_message(
 /// # Returns
 /// * `Ok(base64_string)` - The file contents encoded as base64
 /// * `Err(error)` - Error message if reading fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn read_file_as_base64(file_path: String) -> GroupResult<String> {
     use std::fs;
     use std::io::Read;
@@ -1303,7 +1303,7 @@ fn decode_chat_content_with_type(content: &[u8]) -> (String, String) {
 /// # Returns
 /// * `Ok(count)` - Total unread message count
 /// * `Err(error)` - Error message if operation fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_total_unread_count() -> GroupResult<u32> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
     let account_id = current_user.id;
@@ -1320,7 +1320,7 @@ pub async fn get_total_unread_count() -> GroupResult<u32> {
 /// # Returns
 /// * `Ok(())` - Success
 /// * `Err(error)` - Error message if deletion fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn delete_messages(message_ids: Vec<String>) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
     let account_id = current_user.id;
@@ -1345,7 +1345,7 @@ pub async fn delete_messages(message_ids: Vec<String>) -> GroupResult<()> {
 /// # Returns
 /// * `Ok(())` - Success
 /// * `Err(error)` - Error message if deletion fails
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn delete_all_group_messages(group_id: String) -> GroupResult<()> {
     let current_user = get_current_user_internal().ok_or("No current user found")?;
     let account_id = current_user.id;

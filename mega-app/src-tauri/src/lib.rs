@@ -12,7 +12,7 @@ struct AppState {
 }
 
 // Command to login to MEGA
-#[tauri::command]
+#[tauri_crate::command]
 async fn mega_login(
     state: State<'_, AppState>,
     email: String,
@@ -27,7 +27,7 @@ async fn mega_login(
 }
 
 // Command to list files from MEGA
-#[tauri::command]
+#[tauri_crate::command]
 async fn mega_list_files(
     state: State<'_, AppState>,
     path: Option<String>,

@@ -147,7 +147,7 @@ fn get_guidelines_by_state(user_state: String) -> &'static str {
 }
 
 /// Get screenshots context
-#[tauri::command]
+#[tauri_crate::command]
 pub fn screenshots_context(time_window_minutes: Option<i64>) -> Result<String, String> {
     let (user_intention, user_state, screenshots_context) =
         if let Some(time_window_minutes) = time_window_minutes {
@@ -176,7 +176,7 @@ pub fn screenshots_context(time_window_minutes: Option<i64>) -> Result<String, S
 }
 
 /// Generate a suggestion
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn generate_fake_suggestion(
     app_handle: AppHandle,
     user_state: String,

@@ -26,7 +26,7 @@ pub async fn create_embedding_internal(
     _create_embedding(&manager, text, Some(normalize)).await
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn init_embedding_service(
     app_handle: AppHandle,
     manager: tauri::State<'_, EmbeddingManager>,
@@ -37,7 +37,7 @@ pub async fn init_embedding_service(
         .map_err(|e| format!("Failed to initialize embedding service: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn embedding_service_info(
     manager: tauri::State<'_, EmbeddingManager>,
 ) -> Result<EmbeddingServiceInfo, String> {
@@ -47,7 +47,7 @@ pub async fn embedding_service_info(
         .map_err(|e| format!("Failed to initialize embedding service: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn create_embedding(
     text: String,
     normalize: Option<bool>,
@@ -57,7 +57,7 @@ pub async fn create_embedding(
     _create_embedding(&manager, text, normalize).await
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn compute_text_similarity(
     text1: String,
     text2: String,
@@ -69,7 +69,7 @@ pub async fn compute_text_similarity(
         .map_err(|e| format!("Failed to compute similarity: {}", e))
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn compute_embedding_similarity(
     embedding1: Vec<f32>,
     embedding2: Vec<f32>,

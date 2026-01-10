@@ -14,6 +14,7 @@ import Storage from "./pages/Storage";
 import Timetable from "./pages/Timetable";
 import Tasks from "./pages/Tasks";
 import BallTrail from "./components/common/BallTrail";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
@@ -30,10 +31,12 @@ function App() {
       <SiteProvider>
         <ThemeProvider>
           <ChatProvider>
-            <div className="relative h-screen w-screen">
-              <BallTrail />
-              <Avatar />
-            </div>
+            <ErrorBoundary>
+              <div className="relative h-screen w-screen">
+                <BallTrail />
+                <Avatar />
+              </div>
+            </ErrorBoundary>
           </ChatProvider>
         </ThemeProvider>
       </SiteProvider>
@@ -68,18 +71,20 @@ function App() {
 
               {/* Page content */}
               <div className="flex-1 bg-[#fafafa] rounded-l-[2rem] overflow-hidden">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/groups" element={<Chat />} />
-                 {/* <Route path="/ai" element={<AI />} /> {/* Page content */}
-                 {/* <Route path="/gpt" element={<Gpt />} /> {/* Page content */}
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/storage" element={<Storage />} />
-                  <Route path="/timetable" element={<Timetable />} />
-                  <Route path="/tasks" element={<Tasks />} />
-                  <Route path="/map" element={<Map />} />
-                  <Route path="*" element={<Dashboard />} />
-                </Routes>
+                <ErrorBoundary>
+                  <Routes>
+                    <Route path="/" element={<Dashboard />} />
+                    <Route path="/groups" element={<Chat />} />
+                   {/* <Route path="/ai" element={<AI />} /> {/* Page content */}
+                   {/* <Route path="/gpt" element={<Gpt />} /> {/* Page content */}
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/storage" element={<Storage />} />
+                    <Route path="/timetable" element={<Timetable />} />
+                    <Route path="/tasks" element={<Tasks />} />
+                    <Route path="/map" element={<Map />} />
+                    <Route path="*" element={<Dashboard />} />
+                  </Routes>
+                </ErrorBoundary>
               </div>
             </div>
           </div>

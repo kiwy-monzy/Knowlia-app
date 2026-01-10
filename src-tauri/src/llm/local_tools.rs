@@ -67,7 +67,7 @@ pub async fn get_ocr(app_handle: &AppHandle, screenshot_id: u32) -> Result<Strin
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn semantic_search_window_info(
     app_handle: AppHandle,
     query: &str,

@@ -1,26 +1,32 @@
 "use client";
 
 import { FC, useEffect, useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import { lazy, Suspense } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { Wifi, Globe, Bluetooth, User, Network } from 'lucide-react';
 
-// Dynamically import ForceGraph2D from the dedicated 2D package
-// This avoids the A-Frame dependency issues
-const ForceGraph2D = dynamic(
-    () => import('react-force-graph-2d'), 
-    {
-        ssr: false,
-        loading: () => <div className="flex justify-center items-center h-96 text-gray-300">Loading network graph...</div>
-    }
-);
+// ==================== DEBOUNCE UTILITY ====================
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
+
+// Dynamically import ForceGraph2D using React.lazy
+const ForceGraph2D = lazy(() => import('react-force-graph-2d'));
 
 interface NetworkUser {
     peer_id: string;
     q8id: string;
     name: string;
     is_online: boolean;
+    is_relay?: boolean;
     connections: Array<{
         module: number;
         via_node?: string;
@@ -79,87 +85,96 @@ const ClientOnly: FC<{ children: React.ReactNode }> = ({ children }) => {
     return <>{children}</>;
 };
 
+// Mock network data for demonstration
+const mockNetworkUsers: NetworkUser[] = [
+  {
+    peer_id: 'user-1',
+    q8id: 'q8id-1',
+    name: 'Alice Johnson',
+    is_online: true,
+    connections: [
+      { module: 2, rtt: 45, hop_count: 1, via_node: 'relay-1' },
+      { module: 1, rtt: 30, hop_count: 1 }
+    ]
+  },
+  {
+    peer_id: 'user-2',
+    q8id: 'q8id-2',
+    name: 'Bob Smith',
+    is_online: true,
+    connections: [
+      { module: 2, rtt: 65, hop_count: 1, via_node: 'relay-1' },
+      { module: 1, rtt: 25, hop_count: 1 }
+    ]
+  },
+  {
+    peer_id: 'user-3',
+    q8id: 'q8id-3',
+    name: 'Carol Davis',
+    is_online: true,
+    connections: [
+      { module: 2, rtt: 80, hop_count: 1, via_node: 'relay-1' },
+      { module: 4, rtt: 120, hop_count: 1 }
+    ]
+  },
+  {
+    peer_id: 'user-4',
+    q8id: 'q8id-4',
+    name: 'David Wilson',
+    is_online: true,
+    connections: [
+      { module: 1, rtt: 15, hop_count: 1 }
+    ]
+  },
+  {
+    peer_id: 'user-5',
+    q8id: 'q8id-5',
+    name: 'Emma Brown',
+    is_online: false,
+    connections: [
+      { module: 2, rtt: 200, hop_count: 2, via_node: 'relay-2' }
+    ]
+  },
+  {
+    peer_id: 'relay-1',
+    q8id: '',
+    name: 'Relay Node 1',
+    is_online: true,
+    connections: [],
+    is_relay: true
+  },
+  {
+    peer_id: 'relay-2',
+    q8id: '',
+    name: 'Relay Node 2',
+    is_online: true,
+    connections: [],
+    is_relay: true
+  }
+];
+
 const GraphView: FC = () => {
     const [graphData, setGraphData] = useState<GraphData>({ nodes: [], links: [] });
     const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
-    const [networkUsers, setNetworkUsers] = useState<NetworkUser[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [networkUsers, setNetworkUsers] = useState<NetworkUser[]>(mockNetworkUsers);
+    const [loading, setLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState<NetworkUser | null>(null);
 
     // Fetch network users from Tauri backend
     const fetchNetworkUsers = useCallback(async () => {
         try {
             setLoading(true);
-            console.log('Attempting to fetch network users...');
             const usersJson = await invoke<string>('get_all_users');
-            console.log('Raw response from backend:', usersJson);
-            
             let users: NetworkUser[];
             try {
                 users = JSON.parse(usersJson);
-                console.log('Parsed users:', users);
-                console.log('Number of users:', users.length);
-                
-                // If no users from backend, create some mock data for testing
-                if (users.length === 0) {
-                    console.log('No users from backend, creating mock data for testing...');
-                    users = [
-                        {
-                            peer_id: "12D3KooWTest1234567890123456789012345678901234567890123456789",
-                            q8id: "TestQ8ID123",
-                            name: "Test User 1",
-                            is_online: true,
-                            connections: [
-                                { module: 2, via_node: "relay1", hop_count: 1, rtt: 50000 },
-                                { module: 1, via_node: "relay2", hop_count: 1, rtt: 30000 }
-                            ]
-                        },
-                        {
-                            peer_id: "12D3KooWTest0987654321098765432109876543210987654321098765432",
-                            q8id: "TestQ8ID456", 
-                            name: "Test User 2",
-                            is_online: false,
-                            connections: []
-                        }
-                    ];
-                    console.log('Created mock users:', users);
-                }
-                
-                // Log each user's details
-                users.forEach((user, index) => {
-                    console.log(`User ${index + 1}:`, {
-                        name: user.name,
-                        peer_id: user.peer_id,
-                        q8id: user.q8id,
-                        is_online: user.is_online,
-                        connections: user.connections.length
-                    });
-                });
             } catch (parseError) {
-                console.error('Failed to parse JSON response:', parseError);
-                console.log('Response that failed to parse:', usersJson);
                 users = [];
             }
             
             setNetworkUsers(users);
         } catch (error) {
             console.error('Failed to fetch network users:', error);
-            console.error('Error details:', error);
-            
-            // Set mock data on error as well for testing
-            const mockUsers: NetworkUser[] = [
-                {
-                    peer_id: "12D3KooWError1234567890123456789012345678901234567890123456789",
-                    q8id: "ErrorQ8ID123",
-                    name: "Error Test User",
-                    is_online: true,
-                    connections: [
-                        { module: 2, via_node: "relay1", hop_count: 1, rtt: 50000 }
-                    ]
-                }
-            ];
-            console.log('Setting mock data due to error:', mockUsers);
-            setNetworkUsers(mockUsers);
         } finally {
             setLoading(false);
         }
@@ -189,8 +204,12 @@ const GraphView: FC = () => {
         
         const setupEventListener = async () => {
             try {
+                // Debounced update function to prevent excessive re-renders
+                const debouncedUpdate = debounce((payload: NetworkUser[]) => {
+                    setNetworkUsers(payload);
+                }, 300); // 300ms debounce delay
+
                 unlisten = await listen<NetworkUser[]>('neighbors-updated', (event) => {
-                    console.log('Received neighbors-updated event:', event.payload);
                     
                     let parsedPayload = event.payload;
                     if (typeof event.payload === 'string') {
@@ -202,7 +221,7 @@ const GraphView: FC = () => {
                         }
                     }
                     
-                    setNetworkUsers(parsedPayload);
+                    debouncedUpdate(parsedPayload);
                 });
             } catch (error) {
                 console.error('Failed to setup event listener:', error);
@@ -235,7 +254,7 @@ const GraphView: FC = () => {
         
         // First pass: collect all unique node IDs and create user nodes
         networkUsers.forEach((user, userIndex) => {
-            console.log(`Processing user ${userIndex + 1}/${networkUsers.length}:`, user.name);
+            console.log(`Processing user ${userIndex + 1}/${networkUsers.length}:`, user.name, 'online:', user.is_online);
             
             // Add user node
             const userColor = user.is_online ? getNodeColorForUser(user) : '#9ca3af';
@@ -295,6 +314,7 @@ const GraphView: FC = () => {
                         animated: user.is_online
                     };
                     links.push(link);
+                    console.log('Created link:', link);
                 }
             });
         });
@@ -418,7 +438,7 @@ const GraphView: FC = () => {
                     <p className="text-sm mt-2">Try connecting to other qaul nodes</p>
                 </div>
             ) : (
-                <ClientOnly>
+                <Suspense fallback={<div className="flex justify-center items-center h-96 text-gray-300">Loading network graph...</div>}>
                     <ForceGraph2D
                         width={dimensions.width}
                         height={dimensions.height}
@@ -433,7 +453,7 @@ const GraphView: FC = () => {
                         }}
                         nodeColor={(node: any) => node.color}
                         linkColor={(link: any) => link.color}
-                        backgroundColor={getBackgroundColor}
+                        backgroundColor={getBackgroundColor()}
                         linkDirectionalArrowLength={3.5}
                         linkDirectionalArrowRelPos={1}
                         cooldownTicks={100}
@@ -441,10 +461,10 @@ const GraphView: FC = () => {
                         nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
                             // Draw the node circle
                             const label = node.name;
-                            const fontSize = node.is_relay ? 8/globalScale : 11/globalScale;
-                            const nodeSize = Math.max(3, (node.val || 1) * 6);
+                            const fontSize = node.is_relay ? 10/globalScale : 12/globalScale;
+                            const nodeSize = Math.max(4, (node.val || 1) * 8); // Increased base size
                             
-                            // Draw the circle for the node
+                            // Draw circle for the node
                             ctx.beginPath();
                             ctx.arc(node.x, node.y, nodeSize, 0, 2 * Math.PI);
                             ctx.fillStyle = node.color;
@@ -453,30 +473,30 @@ const GraphView: FC = () => {
                             // Add border for online users
                             if (node.is_online && !node.is_relay) {
                                 ctx.strokeStyle = '#ffffff';
-                                ctx.lineWidth = 2;
+                                ctx.lineWidth = 3; // Thicker border
                                 ctx.stroke();
                             }
                             
                             // Draw the text label
-                            ctx.font = `${fontSize}px Sans-Serif`;
+                            ctx.font = `bold ${fontSize}px Sans-Serif`;
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'middle';
                             ctx.fillStyle = '#ffffff';
                             
-                            // Add a small shadow for better readability
-                            ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                            ctx.shadowBlur = 4;
-                            ctx.shadowOffsetX = 1;
-                            ctx.shadowOffsetY = 1;
+                            // Add a stronger shadow for better readability
+                            ctx.shadowColor = 'rgba(0, 0, 0, 0.9)';
+                            ctx.shadowBlur = 6;
+                            ctx.shadowOffsetX = 2;
+                            ctx.shadowOffsetY = 2;
                             
-                            // Position the text below the node
-                            const textY = node.y + nodeSize + fontSize + 2;
+                            // Position text below the node
+                            const textY = node.y + nodeSize + fontSize + 4;
                             ctx.fillText(label, node.x, textY);
                             
                             // Draw connection type icons for users
                             if (!node.is_relay && node.connections.length > 0) {
-                                const iconSize = 8;
-                                const iconY = textY + fontSize + 4;
+                                const iconSize = 10;
+                                const iconY = textY + fontSize + 6;
                                 let iconX = node.x - (node.connections.length * iconSize) / 2;
                                 
                                 node.connections.forEach((module: number) => {
@@ -508,14 +528,14 @@ const GraphView: FC = () => {
                         }}
                         nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
                             // Increase the pointer area to include the label
-                            const nodeSize = Math.max(3, (node.val || 1) * 6);
+                            const nodeSize = Math.max(4, (node.val || 1) * 8);
                             ctx.beginPath();
-                            ctx.arc(node.x, node.y, nodeSize + 12, 0, 2 * Math.PI);
+                            ctx.arc(node.x, node.y, nodeSize + 15, 0, 2 * Math.PI); // Larger hit area
                             ctx.fillStyle = color;
                             ctx.fill();
                         }}
                     />
-                </ClientOnly>
+                </Suspense>
             )}
             
             {/* Selected User Details */}

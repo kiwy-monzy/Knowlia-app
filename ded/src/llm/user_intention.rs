@@ -378,7 +378,7 @@ pub async fn analyze_current_user_intention(
 }
 
 /// Tauri command to analyze and save user intention
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn analyze_user_intention_command(
     app_handle: tauri::AppHandle,
     time_window_minutes: Option<u64>,
@@ -388,7 +388,7 @@ pub async fn analyze_user_intention_command(
 }
 
 /// Tauri command to get recent user intentions
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_user_intentions_command(
     limit: Option<u32>,
 ) -> Result<Vec<UserIntentionHistory>, String> {

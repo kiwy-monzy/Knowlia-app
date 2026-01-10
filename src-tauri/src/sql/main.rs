@@ -332,6 +332,7 @@ pub fn get_config() -> Result<GlobalConfig, DataError> {
         screenshot_delay: get_value("screenshot_delay", "5"),
         user_intention_delay: get_value("user_intention_delay", "5"),
         window_time_minutes: get_value("window_time_minutes", "5"),
+        dashboard_stats_delay: get_value("dashboard_stats_delay", "30"),
         app_path: get_value("app_path", ""),
         enable_tools: get_value("enable_tools", "false"),
         sidebar_collapse: get_value("sidebar_collapse", "false"),

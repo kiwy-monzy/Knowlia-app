@@ -23,7 +23,7 @@ pub struct NotificationResponse {
 }
 
 /// Send a notification with a generated UUID
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn send_notification(app_handle: AppHandle, from_test: bool) -> Result<String, String> {
     // Generate a unique UUID for this notification
     let notification_uuid = Uuid::new_v4().to_string();
@@ -43,7 +43,7 @@ pub async fn send_notification(app_handle: AppHandle, from_test: bool) -> Result
 }
 
 /// Handle user response to notification
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn handle_notification_response(
     app_handle: AppHandle,
     response: NotificationResponse,

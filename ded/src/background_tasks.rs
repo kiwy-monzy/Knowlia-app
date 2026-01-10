@@ -134,7 +134,7 @@ async fn start_automatic_screenshots(
 }
 
 /// Stop all background tasks
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn stop_all_background_tasks() -> Result<(), String> {
     // Stop intention analysis
     let mut intention_handle = INTENTION_TASK_HANDLE.lock().unwrap();
@@ -198,7 +198,7 @@ async fn start_background_tasks_from_config(app_handle: AppHandle) -> Result<Str
 }
 
 /// Unified command to manage background tasks based on global configuration
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn manage_background_tasks(app_handle: AppHandle) -> Result<String, String> {
     // First stop any existing tasks
     stop_all_background_tasks().await?;
@@ -208,7 +208,7 @@ pub async fn manage_background_tasks(app_handle: AppHandle) -> Result<String, St
 }
 
 /// Initialize background task management system
-#[tauri::command]
+#[tauri_crate::command]
 pub fn init_background_task_manager(app_handle: AppHandle) {
     // Start initial background tasks
     tauri::async_runtime::spawn(async move {
@@ -219,7 +219,7 @@ pub fn init_background_task_manager(app_handle: AppHandle) {
 }
 
 /// Get status of background tasks
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_background_tasks_status() -> Result<serde_json::Value, String> {
     let intention_running = INTENTION_TASK_HANDLE.lock().unwrap().is_some();
     let screenshots_running = SCREENSHOT_TASK_HANDLE.lock().unwrap().is_some();

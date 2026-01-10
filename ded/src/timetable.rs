@@ -55,7 +55,7 @@ fn open_db(path: &str) -> Result<Connection, String> {
 }
 
 // Initialize the database
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn init_database(state: State<'_, DbState>) -> Result<String, String> {
     let path = state.db_path.lock().unwrap().clone();
     match open_db(&path) {
@@ -84,7 +84,7 @@ pub async fn init_database(state: State<'_, DbState>) -> Result<String, String> 
 }
 
 // Fetch and process timetable data from API
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn fetch_timetable_data(state: State<'_, DbState>) -> Result<TimetableWeek, String> {
     // Run the scraper in the background using the library
     if let Err(e) = timetable_scrape::run_background_scraper().await {
@@ -140,7 +140,7 @@ fn get_sessions_for_day(conn: &rusqlite::Connection, _day: &str) -> Result<Vec<T
 }
 
 // Get database statistics
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_database_stats(state: State<'_, DbState>) -> Result<serde_json::Value, String> {
     let path = state.db_path.lock().unwrap().clone();
     let conn = open_db(&path)?;
@@ -161,7 +161,7 @@ fn get_event_count(conn: &rusqlite::Connection) -> Result<i64, String> {
 }
 
 // Get all events from database
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_events(state: State<'_, DbState>) -> Result<Vec<TimetableSession>, String> {
     let path = state.db_path.lock().unwrap().clone();
     let conn = open_db(&path)?;
@@ -170,7 +170,7 @@ pub async fn get_all_events(state: State<'_, DbState>) -> Result<Vec<TimetableSe
 }
 
 // Refresh timetable data
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn refresh_timetable() -> Result<String, String> {
     // Run the scraper again to get fresh data
     match timetable_scrape::run_background_scraper().await {
@@ -180,7 +180,7 @@ pub async fn refresh_timetable() -> Result<String, String> {
 }
 
 // Scrape timetable data from API
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn scrape_timetable_data() -> Result<Vec<serde_json::Value>, String> {
     use reqwest::Client;
     use futures::future::join_all;

@@ -25,7 +25,8 @@ export class GlobalConfig {
 
   async loadConfig() {
     const sqlGlobalConfig = await invoke<GlobalConfig>("get_global_config");
-    console.log("sqlGlobalConfig", sqlGlobalConfig);
+    //console.log("sqlGlobalConfig", sqlGlobalConfig);
+    
     if (sqlGlobalConfig.use_same_model) {
       this.use_same_model = String(sqlGlobalConfig.use_same_model) === "true";
     }

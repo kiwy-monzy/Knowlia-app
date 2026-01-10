@@ -1,8 +1,16 @@
 fn main() {
+    #[cfg(windows)]
+    {
+        println!("cargo:rustc-link-arg=/STACK:33554432");
+    }
 
     // Set Tauri signing environment variables
     //println!("cargo:rustc-env=TAURI_SIGNING_PRIVATE_KEY=./key/tabletopv1.key");
     //println!("cargo:rustc-env=TAURI_SIGNING_PRIVATE_KEY_PASSWORD=Novida@2025");
+
+    // You can also set other useful environment variables
+    println!("cargo:rustc-env=RUST_BACKTRACE=1");
+
     tauri_build::build();
     //   set TAURI_SIGNING_PRIVATE_KEY=dW50cnVzdGVkIGNvbW1lbnQ6IHJzaWduIGVuY3J5cHRlZCBzZWNyZXQga2V5ClJXUlRZMEl5UnJFNnZIZWh0V1Q0OXBWK3Vhd2FBcndZZ1FMMm5GVUhSR1BHYTFYbjNZRUFBQkFBQUFBQUFBQUFBQUlBQUFBQTM5UG5wWjNpY1BpWURHUEhWeHBIU2FMWmV1UWFNV1ltYmtJVlY1R2RhSDkvNjNXUU9sUWdSRlcxbUU3dEtxUU1yV3FvZzYvQk93Q0NsbjQ2cERFNGQ5UnhiVFgybUYwNXZ5SzB1Z1pDdldzMHdkcklqVlJFT0cxWnBlcVUzanBWdmI4L0QrbDZFU1k9Cg==
     //   set TAURI_SIGNING_PRIVATE_KEY_PASSWORD=dangofugu

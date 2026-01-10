@@ -1,4 +1,4 @@
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn moodle_login(
     _base_url: String,
     _username: String,

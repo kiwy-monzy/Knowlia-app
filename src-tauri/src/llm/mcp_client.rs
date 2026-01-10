@@ -453,7 +453,7 @@ impl McpClientManager {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_mcp_server_config(
     app_handle: AppHandle,
     name: String,
@@ -462,7 +462,7 @@ pub async fn get_mcp_server_config(
     Ok(mcp_manager.get_server_config(&name).await)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn list_mcp_tools(server_name: String) -> Result<Vec<sql::model::ToolData>, String> {
     match sql::queries::get_all_tools_by_server(server_name) {
         Ok(tools) => {
@@ -476,7 +476,7 @@ pub async fn list_mcp_tools(server_name: String) -> Result<Vec<sql::model::ToolD
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn update_tool_status(
     server_name: String,
     tool_name: String,
@@ -486,13 +486,13 @@ pub async fn update_tool_status(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn update_tool_status_by_server(server_name: String, status: bool) -> Result<(), String> {
     sql::queries::update_tool_status_by_server(server_name, status)?;
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn add_mcp_server(
     app_handle: AppHandle,
     name: String,
@@ -548,7 +548,7 @@ pub async fn add_mcp_server(
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn remove_mcp_server(app_handle: AppHandle, name: String) -> Result<(), String> {
     let mcp_manager = app_handle.state::<McpClientManager>();
     mcp_manager
@@ -561,13 +561,13 @@ pub async fn remove_mcp_server(app_handle: AppHandle, name: String) -> Result<()
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn list_mcp_servers(app_handle: AppHandle) -> Result<Vec<String>, String> {
     let mcp_manager = app_handle.state::<McpClientManager>();
     Ok(mcp_manager.list_servers().await)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn is_mcp_server_running(app_handle: AppHandle, name: String) -> Result<bool, String> {
     let mcp_manager = app_handle.state::<McpClientManager>();
     Ok(mcp_manager.is_server_running(&name).await)

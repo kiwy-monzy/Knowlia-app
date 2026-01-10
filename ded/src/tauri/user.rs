@@ -32,7 +32,7 @@ pub struct UserList {
 }
 
 /// Get all users (both online and offline) - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_users() -> Result<String, String> {
     // Get all users from the users store
     let users = USERS.get().read().unwrap();
@@ -78,7 +78,7 @@ pub async fn get_all_users() -> Result<String, String> {
 }
 
 /// Get online users - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_online_users() -> Result<String, String> {
     match RoutingTable::get_online_users() {
         json_string => Ok(json_string),
@@ -86,7 +86,7 @@ pub async fn get_online_users() -> Result<String, String> {
 }
 
 /// Get offline users - Enhanced version
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_offline_users() -> Result<String, String> {
     match RoutingTable::get_offline_users() {
         json_string => Ok(json_string),
@@ -94,7 +94,7 @@ pub async fn get_offline_users() -> Result<String, String> {
 }
 
 /// Get current user profile
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn user_profile() -> Result<String, String> {
     // Get the current user account
     match UserAccounts::get_default_user() {
@@ -122,7 +122,7 @@ pub async fn user_profile() -> Result<String, String> {
 }
 
 /// Update current user profile
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn set_node_profile_tauri(name: String, college: String, reg_no: String, profile: String, about: String) -> Result<(), String> {
     info!("set_node_profile_tauri called with name: {}, college: {}, reg_no: {}", name, college, reg_no);
     
@@ -169,7 +169,7 @@ pub async fn set_node_profile_tauri(name: String, college: String, reg_no: Strin
 /// because it performs no I/O and cannot fail.
 /// Return a JSON object summarising all neighbours grouped by connection module.
 /// This also maps PeerIds to Usernames from the libqaul profile store.
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_all_neighbours() -> serde_json::Value {
     let users = USERS.get().read().unwrap();
     let mut lan_neighbours = Vec::new();

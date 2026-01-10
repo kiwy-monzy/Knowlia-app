@@ -1,24 +1,16 @@
 [package]
-name = "knowlia"
-version = "1.1.2"
+name = "app"
+version = "0.1.0"
 description = "A Tauri App"
 authors = ["you"]
-default-run = "knowlia"
+license = ""
+repository = ""
 edition = "2021"
-
-
-[[bin]]
-name = "knowlia"
-path = "src/main.rs"
-
-[[bin]]
-name = "server"
-path = "src/bin/server.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "knowlia_lib"
+name = "app_lib"
 crate-type = ["rlib"]
 
 
@@ -45,7 +37,7 @@ tauri-plugin-system-info = { git = "https://github.com/HuakunShen/tauri-plugin-s
 tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "io-util", "net"] }
 libp2p = { version = "0.55.0", features = ["ed25519", "noise", "tcp", "yamux", "macros"] }
 log = "0.4"
 # Add libqaul as a dependency
@@ -117,7 +109,6 @@ mega = { path = "../modules/mega-rs" }
 # egui dependencies for web canvas
 egui = "0.26.2"
 eframe = { version = "0.26.2", default-features = false, features = [
-    "accesskit",     # Make egui comptaible with screen readers. NOTE: adds a lot of dependencies.
     "default_fonts", # Embed the default egui fonts.
     "glow",          # Use the glow rendering backend. Alternative: "wgpu".
 ] }
@@ -186,14 +177,27 @@ opt-level = 3
 opt-level = 3
 [profile.release.package.rten-tensor]
 opt-level = 3
+[profile.release.package.egui]
+opt-level = 3
+[profile.release.package.eframe]
+opt-level = 3
+[profile.release.package.image]
+opt-level = 3
+[profile.release.package.libp2p]
+opt-level = 3
 
 
 
 [profile.release]
 strip = true
 lto = "thin"
-codegen-units = 4
-panic = "unwind"
+codegen-units = 1
+panic = "abort"
+opt-level = 3
+overflow-checks = false
+debug = false
+debug-assertions = false
+incremental = false
 
 
 

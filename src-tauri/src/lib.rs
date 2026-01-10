@@ -1,23 +1,9 @@
-// Copyright (c) 2021 Open Community Project Association https://ocpa.ch
-// This software is published under the AGPLv3 license.
-
-//! # Qaul Tauri Application
-//!
-//! External Tauri application for managing qaul groups and functionality
-
-#![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
-)]
-use contextual_bandit::{manager as cb_manager, notifications};
-// Use tauri with an alias to avoid conflict with local module
-// Import Tauri types with explicit paths to avoid conflicts
-
 extern crate tauri as tauri_crate;
 use ::tauri_crate::{Manager, AppHandle, Emitter, Listener, LogicalPosition, Window, LogicalSize, State, WebviewWindowBuilder, WebviewUrl, Event, Builder, App, async_runtime};
 use embedding::service::EmbeddingManager;
 use llm::{mcp_client, mcp_server, LoycaServer};
 use ocr::OcrManager;
+use tauri_plugin_updater::UpdaterExt;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::sync::{Arc, Mutex};
@@ -49,6 +35,7 @@ use crate::tauri::ble::{
     request_ble_permissions,
     send_ble_message,
 };
+use contextual_bandit::{manager as cb_manager, notifications};
 // Commands modules - uncomment when needed
  use commands::bolt::{confirm_verification, get_location_suggestions, start_verification};
 use commands::gdrive::{
@@ -1208,6 +1195,7 @@ pub fn run() {
     .manage(timetable::DbState::default())
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_media::init())
+    .plugin(tauri_plugin_updater::Builder::new().build())
     .plugin(tauri_plugin_fs::init())
     .plugin(tauri_plugin_notification::init())
     .plugin(tauri_plugin_cache::init())
@@ -1374,7 +1362,7 @@ pub fn run() {
             background_tasks::stop_all_background_tasks,
             background_tasks::manage_background_tasks,
             background_tasks::get_background_tasks_status,
-            start_background_data_sync_service,
+            crate::start_background_data_sync_service,
             stop_background_data_sync_service,
             trigger_network_users_update,
             // contextual bandit
@@ -1472,4 +1460,28 @@ pub fn run() {
         ])
         .run(tauri_crate::generate_context!())
         .expect("error while running tauri application");
+}
+
+async fn update(app: tauri_crate::AppHandle) -> tauri_plugin_updater::Result<()> {
+    if let Some(update) = app.updater()?.check().await? {
+        let mut downloaded = 0;
+
+        // alternatively we could also call update.download() and update.install() separately
+        update
+            .download_and_install(
+                |chunk_length, content_length| {
+                    downloaded += chunk_length;
+                    println!("downloaded {downloaded} from {content_length:?}");
+                },
+                || {
+                    println!("download finished");
+                },
+            )
+            .await?;
+
+        println!("update installed");
+        app.restart();
+    }
+
+    Ok(())
 }

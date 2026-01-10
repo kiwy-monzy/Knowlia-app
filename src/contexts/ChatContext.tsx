@@ -1,6 +1,18 @@
-import { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback, useMemo } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+
+// ==================== DEBOUNCE UTILITY ====================
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  };
+};
 
 // Simple base58 encoding function (for PeerId conversion)
 const base58Encode = (bytes: number[]): string => {
@@ -289,11 +301,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       
       // If no changes detected, return previous state to avoid re-render
       if (!hasChanges) {
-        console.debug('ChatContext: No channel changes detected, skipping update');
         return prevChannels;
       }
       
-      console.debug('ChatContext: Channel changes detected:', changedFields);
+      //console.debug('ChatContext: Channel changes detected:', changedFields);
       
       // Convert back to array and sort
       const updatedChannels = Array.from(channelMap.values()).sort((a, b) => {
@@ -519,7 +530,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unlistenUsers = await listen<string>('users-updated', (event) => {
       try {
         const allUsersData = JSON.parse(event.payload);
-        console.log('Received users update:', allUsersData?.length, 'users');
+        //console.log('Received users update:', allUsersData?.length, 'users');
         
         if (!Array.isArray(allUsersData)) {
           console.warn('Invalid users data format received:', typeof allUsersData);
@@ -566,61 +577,66 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     });
     
-    // Groups/Channels listener with enhanced error handling
+    // Groups/Channels listener with enhanced error handling and debouncing
+    const debouncedGroupsUpdate = debounce((groupsData: any[]) => {
+      //console.log('Received groups update:', groupsData?.length, 'groups');
+      
+      if (!Array.isArray(groupsData)) {
+        console.warn('Invalid groups data format received:', typeof groupsData);
+        return;
+      }
+      
+      // Convert to Channel format
+      const convertedChannels: Channel[] = groupsData.map((group: any) => ({
+        id: Array.isArray(group.group_id) 
+          ? group.group_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
+          : String(group.group_id),
+        name: group.group_name,
+        type: group.is_direct_chat ? 'dm' : 'group',
+        createdAt: group.created_at,
+        status: group.status,
+        revision: group.revision,
+        isDirectChat: group.is_direct_chat,
+        members: Array.isArray(group.members) ? group.members.map((member: any) => ({
+          id: Array.isArray(member.user_id) 
+            ? member.user_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
+            : String(member.user_id),
+          name: member.name || 'Unknown User',
+          avatar: member.profile_pic,
+          isOnline: member.is_online || member.state === 1,
+          role: member.role || 0,
+          joinedAt: member.joined_at || 0,
+          state: member.state || 0,
+          lastMessageIndex: member.last_message_index || 0,
+          regNo: member.reg_no || '',
+          college: member.college || '',
+          profilePic: member.profile_pic || '',
+          about: member.about || ''
+        })) : [],
+        unreadMessages: group.unread_messages || 0,
+        lastMessageAt: group.last_message_at || 0,
+        lastMessage: group.last_message || '',
+        lastMessageSenderId: group.last_message_sender_id || '',
+        lastMessageStatus: group.last_message_status || 'sent',
+        hasActiveCall: group.has_active_call || false,
+        activeCallType: group.active_call_type || 'voice'
+      }));
+      
+      // Use smooth update instead of replacing all data
+      updateChannelsSmooth(convertedChannels);
+      
+      // Mark as loaded and turn off loading immediately after first successful load
+      if (!initialChannelsLoaded.current) {
+        initialChannelsLoaded.current = true;
+        setLoading(false);
+        console.log('Channels initial load completed');
+      }
+    }, 500); // 500ms debounce for groups
+
     const unlistenGroups = await listen<string>('groups-updated', (event) => {
       try {
         const groupsData = JSON.parse(event.payload);
-        console.log('Received groups update:', groupsData?.length, 'groups');
-        
-        if (!Array.isArray(groupsData)) {
-          console.warn('Invalid groups data format received:', typeof groupsData);
-          return;
-        }
-        
-        // Convert to Channel format
-        const convertedChannels: Channel[] = groupsData.map((group: any) => ({
-          id: Array.isArray(group.group_id) 
-            ? group.group_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
-            : String(group.group_id),
-          name: group.group_name,
-          type: group.is_direct_chat ? 'dm' : 'group',
-          createdAt: group.created_at,
-          status: group.status,
-          revision: group.revision,
-          isDirectChat: group.is_direct_chat,
-          members: Array.isArray(group.members) ? group.members.map((member: any) => ({
-            id: Array.isArray(member.user_id) 
-              ? member.user_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
-              : String(member.user_id),
-            name: member.name || 'Unknown User',
-            avatar: member.profile_pic,
-            isOnline: member.is_online || member.state === 1,
-            role: member.role || 0,
-            joinedAt: member.joined_at || 0,
-            state: member.state || 0,
-            lastMessageIndex: member.last_message_index || 0,
-            regNo: member.reg_no || '',
-            college: member.college || '',
-            profilePic: member.profile_pic,
-            about: member.about || ''
-          })) : [],
-          unreadMessages: group.unread_messages || 0,
-          lastMessageAt: group.last_message_at || 0,
-          lastMessage: group.last_message || '',
-          lastMessageSenderId: Array.isArray(group.last_message_sender_id) 
-            ? group.last_message_sender_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
-            : String(group.last_message_sender_id || '')
-        }));
-        
-        // Use smooth update for channels
-        updateChannelsSmooth(convertedChannels);
-        
-        // Mark as loaded immediately after first successful load
-        if (!initialChannelsLoaded.current) {
-          initialChannelsLoaded.current = true;
-          setLoading(false);
-          console.log('Channels initial load completed');
-        }
+        debouncedGroupsUpdate(groupsData);
       } catch (error) {
         handleListenerError(error, 'groups');
       }
@@ -630,7 +646,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unlistenInvitations = await listen<string>('invitations-updated', (event) => {
       try {
         const invitationsData = JSON.parse(event.payload);
-        console.log('Received invitations update:', invitationsData?.length, 'invitations');
+        //console.log('Received invitations update:', invitationsData?.length, 'invitations');
         
         if (!Array.isArray(invitationsData)) {
           console.warn('Invalid invitations data format received:', typeof invitationsData);
@@ -644,7 +660,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         if (!initialInvitationsLoaded.current) {
           initialInvitationsLoaded.current = true;
           setInvitationsLoading(false);
-          console.log('Invitations initial load completed');
+          //console.log('Invitations initial load completed');
         }
       } catch (error) {
         handleListenerError(error, 'invitations');
@@ -671,16 +687,49 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       try {
         const count = event.payload;
         setTotalUnreadMessages(count);
-        console.log('Total unread count updated:', count);
+        //console.log('ChatContext: Total unread count updated:', count);
       } catch (error) {
         handleListenerError(error, 'total_unread_count');
+      }
+    });
+    
+    // Dashboard statistics listeners
+    const unlistenTotalGroups = await listen<number>('total_groups_updated', (event) => {
+      try {
+        const count = event.payload;
+        setTotalGroups(count);
+        ///console.log('ChatContext: Total groups count updated:', count);
+      } catch (error) {
+        handleListenerError(error, 'total_groups');
+      }
+    });
+    
+    const unlistenDirectChats = await listen<number>('direct_chats_updated', (event) => {
+      try {
+        const count = event.payload;
+        setDirectChats(count);
+        console.log('ChatContext: Direct chats count updated:', count);
+      } catch (error) {
+        handleListenerError(error, 'direct_chats');
+      }
+    });
+    
+    const unlistenDashboardStats = await listen<any>('dashboard_stats_updated', (event) => {
+      try {
+        const stats = event.payload;
+        setTotalGroups(stats.total_groups);
+        setDirectChats(stats.direct_chats);
+        setTotalUnreadMessages(stats.total_unread_messages);
+        console.log('ChatContext: Dashboard stats updated:', stats);
+      } catch (error) {
+        handleListenerError(error, 'dashboard_stats');
       }
     });
     
     const unlistenUserProfile = await listen<string>('user_profile_updated', (event) => {
       try {
         const profile = JSON.parse(event.payload);
-        console.log('User profile updated:', profile);
+        //console.log('User profile updated:', profile);
         // Profile data can be used to update user context
       } catch (error) {
         handleListenerError(error, 'user_profile');
@@ -690,7 +739,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unlistenNetworkStats = await listen<any>('network_stats_updated', (event) => {
       try {
         const stats = event.payload;
-        console.log('Network stats updated:', stats);
+        //console.log('Network stats updated:', stats);
         // Network stats can be displayed in UI components
       } catch (error) {
         handleListenerError(error, 'network_stats');
@@ -700,7 +749,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const unlistenInternetNeighbours = await listen<any[]>('internet_neighbours_updated', (event) => {
       try {
         const neighbours = event.payload;
-        console.log('Internet neighbours updated:', neighbours?.length, 'neighbours');
         // Neighbours data can be used to update network status
       } catch (error) {
         handleListenerError(error, 'internet_neighbours');
@@ -715,53 +763,65 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       unlistenInvitations();
       unlistenConnectionStatus();
       unlistenTotalUnreadCount();
+      unlistenTotalGroups();
+      unlistenDirectChats();
+      unlistenDashboardStats();
       unlistenUserProfile();
       unlistenNetworkStats();
       unlistenInternetNeighbours();
     };
   };
 
-  // Initialize unified background listeners and message polling
+  // Initial data load (runs once when provider mounts)
   useEffect(() => {
-    
     // Initial data load
     refreshChannels();
     refreshContacts();
     getPendingInvitations();
+  }, []); // Empty dependency array - runs once on mount
+
+  // Setup unified background listeners (runs once when provider mounts)
+  useEffect(() => {
+    let cleanupFn: (() => void) | undefined;
     
-    // Setup unified background listeners
     const setupBackgroundSystems = async () => {
-      const cleanupListeners = await setupUnifiedBackgroundListeners();
-      
-      // Message polling for current channel (keep existing logic)
-      const messageInterval = setInterval(() => {
-        if (currentChannel) {
-          let groupId: string;
-          
-          if (typeof currentChannel.id === 'string') {
-              groupId = currentChannel.id;
-            } else if (Array.isArray(currentChannel.id)) {
-              groupId = (currentChannel.id as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join('');
-            } else {
-              groupId = String(currentChannel.id);
-            }
-          // Only refresh messages if we have a valid group ID
-          if (groupId && /^[0-9a-fA-F]+$/.test(groupId) && groupId.length % 2 === 0) {
-            getMessages(groupId);
-          }
-        }
-      }, 1000);
-      
-      return () => {
-        cleanupListeners();
-        clearInterval(messageInterval);
-      };
+      console.log('ChatContext: Setting up background listeners...');
+      cleanupFn = await setupUnifiedBackgroundListeners();
+      console.log('ChatContext: Background listeners setup complete');
     };
     
-    const cleanup = setupBackgroundSystems();
+    setupBackgroundSystems();
     
     return () => {
-      cleanup.then(cleanupFn => cleanupFn());
+      if (cleanupFn) {
+        console.log('ChatContext: Cleaning up background listeners');
+        cleanupFn();
+      }
+    };
+  }, []); // Empty dependency array - runs once on mount
+
+  // Message polling for current channel (separate effect)
+  useEffect(() => {
+    const messageInterval = setInterval(() => {
+      if (currentChannel) {
+        let groupId: string;
+        
+        if (typeof currentChannel.id === 'string') {
+            groupId = currentChannel.id;
+          } else if (Array.isArray(currentChannel.id)) {
+            groupId = (currentChannel.id as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+          } else {
+            groupId = String(currentChannel.id);
+          }
+        // Only refresh messages if we have a valid group ID
+        if (groupId && /^[0-9a-fA-F]+$/.test(groupId) && groupId.length % 2 === 0) {
+          debouncedGetMessages(groupId);
+        }
+      }
+    }, 1000);
+    
+    return () => {
+      clearInterval(messageInterval);
     };
   }, [currentChannel]);
 
@@ -920,7 +980,24 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const getMessages = async (groupId: string): Promise<any> => {
+  const getMessages = async (groupId: string) => {
+    debouncedGetMessages(groupId);
+  };
+
+  // Debounce utility function
+  const debounce = <T extends (...args: any[]) => void>(
+    func: T,
+    delay: number
+  ): ((...args: Parameters<T>) => void) => {
+    let timeoutId: NodeJS.Timeout;
+    return (...args: Parameters<T>) => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => func(...args), delay);
+    };
+  };
+
+  // Debounced getMessages function
+  const debouncedGetMessages = debounce(async (groupId: string) => {
     try {
       const response = await invoke('get_messages', { groupId }) as string;
       const data = JSON.parse(response);
@@ -936,7 +1013,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         });
       }
       
-      // Convert the fetched messages to the Message interface format
+      // Convert fetched messages to Message interface format
       const convertedMessages: Message[] = data.message_list.map((msg: any) => {
         // Handle group events differently - show as system messages
         if (msg.message_type === 'system') {
@@ -975,22 +1052,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           // Try multiple approaches to find matching file info
           let matchingFile = null;
           
-          // Method 1: Find matching file by sender_id and timestamp (existing logic)
-          matchingFile = data.files?.find((file: any) => {
-            const msgSenderIdStr = Array.isArray(msg.sender_id) 
-              ? msg.sender_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
-              : msg.sender_id;
-            const fileSenderIdStr = Array.isArray(file.sender_id) 
-              ? file.sender_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
-              : file.sender_id;
-            
-            return fileSenderIdStr === msgSenderIdStr && 
-                   Math.abs(file.sent_at - msg.sent_at) < 1000;
-          });
+          // Method 1: Try exact match with message_id
+          if (data.files) {
+            matchingFile = data.files.find((file: any) => {
+              const msgIdStr = Array.isArray(msg.message_id) 
+                ? msg.message_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
+                : msg.message_id;
+              const fileIdStr = Array.isArray(file.message_id) 
+                ? file.message_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
+                : file.message_id;
+              return fileIdStr === msgIdStr;
+            });
+          }
           
-          // Method 2: If not found, try matching by message index and sender
-          if (!matchingFile && msg.index !== undefined) {
-            matchingFile = data.files?.find((file: any) => {
+          // Method 2: Try matching by timestamp and sender
+          if (!matchingFile && data.files) {
+            matchingFile = data.files.find((file: any) => {
               const msgSenderIdStr = Array.isArray(msg.sender_id) 
                 ? msg.sender_id.map((b: number) => b.toString(16).padStart(2, '0')).join('')
                 : msg.sender_id;
@@ -999,11 +1076,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
                 : file.sender_id;
               
               return fileSenderIdStr === msgSenderIdStr && 
-                     Math.abs(file.sent_at - msg.sent_at) < 5000; // Larger time window
+                     Math.abs(file.sent_at - msg.sent_at) < 5000; // Within 5 seconds
             });
           }
           
-          // Method 3: If still not found, try finding the closest file by timestamp for the same sender
+          // Method 3: If still not found, try finding closest file by timestamp for same sender
           if (!matchingFile) {
             const senderFiles = data.files?.filter((file: any) => {
               const msgSenderIdStr = Array.isArray(msg.sender_id) 
@@ -1017,7 +1094,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
             });
             
             if (senderFiles && senderFiles.length > 0) {
-              // Find the file with timestamp closest to the message
+              // Find file with timestamp closest to message
               matchingFile = senderFiles.reduce((closest: any, file: any) => {
                 const msgTimeDiff = Math.abs(file.sent_at - msg.sent_at);
                 const closestTimeDiff = Math.abs(closest.sent_at - msg.sent_at);
@@ -1068,27 +1145,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         };
       });
       
-      // Smooth merge with existing messages
-      setMessages(prevMessages => {
-        const existingMessageIds = new Set(prevMessages.map(msg => msg.id));
-        const newMessages = convertedMessages.filter(msg => !existingMessageIds.has(msg.id));
-        const allMessages = [...prevMessages, ...newMessages];
-        
-        return allMessages.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-      });
-      
-      return {
-        ...data,
-        messages: convertedMessages,
-        files: data.files || []
-      };
+      setMessages(convertedMessages);
     } catch (error) {
-      //console.error('Failed to get messages:', error);
-      throw error;
+      console.error('Failed to get messages:', error);
     }
-  };
+  }, 500);
 
-  // Delete specific messages by their IDs
   const deleteMessages = async (messageIds: string[]) => {
     try {
       await invoke('delete_messages', { messageIds });
@@ -1133,8 +1195,21 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   };
 
   // Refresh statistics function for Dashboard
-  const refreshStats = () => {
-    updateStatistics(channels);
+  const refreshStats = async () => {
+    try {
+      // Use the new backend function for more accurate statistics
+      const stats = await invoke<any>('get_dashboard_stats');
+      
+      setTotalGroups(stats.total_groups);
+      setDirectChats(stats.direct_chats);
+      setTotalUnreadMessages(stats.total_unread_messages);
+      
+      console.log('Dashboard stats refreshed:', stats);
+    } catch (error) {
+      console.error('Failed to refresh dashboard stats:', error);
+      // Fallback to frontend calculation
+      updateStatistics(channels);
+    }
   };
 
   // Message selection management functions
@@ -1225,6 +1300,6 @@ export function useChatContext() {
   const context = useContext(ChatContext);
   if (context === undefined) {
     throw new Error('useChatContext must be used within a ChatProvider');
-  } 
+  }
   return context;
 }

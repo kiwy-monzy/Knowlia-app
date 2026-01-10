@@ -1053,7 +1053,7 @@ pub mod linux {
 }
 
 // Public API
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_active_window_info() -> Result<WindowProcessInfo, String> {
     #[cfg(target_os = "windows")]
     return windows::get_active_window_info();

@@ -4,7 +4,7 @@ use crate::taxi_service::bolt::{
     start_verification as bolt_start_verification,
 };
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn start_verification(
     phone_number: String,
     uuid: String,
@@ -14,7 +14,7 @@ pub async fn start_verification(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn confirm_verification(
     phone_number: String,
     uuid: String,
@@ -25,7 +25,7 @@ pub async fn confirm_verification(
         .map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_location_suggestions(search_string: String) -> Result<String, String> {
     bolt_get_location_suggestions(search_string)
         .await

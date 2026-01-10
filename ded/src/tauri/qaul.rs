@@ -43,7 +43,7 @@ pub fn set_tauri_event_emitter(emitter: std::sync::Arc<dyn Fn(String, serde_json
 }
 
 /// Optional: expose a command so frontend can send CLI-like commands
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn qaul_send_command(command: String) -> Result<String, String> {
     // Process the command using existing CLI infrastructure
     crate::modes::cli::Cli::process_command(command.clone());
@@ -51,19 +51,19 @@ pub async fn qaul_send_command(command: String) -> Result<String, String> {
 }
 
 /// Get internet neighbours information for UI
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_internet_neighbours_ui_command() -> Result<Vec<InternetNeighbourInfo>, String> {
     Ok(get_internet_neighbours_ui())
 }
 
 /// Get all neighbours information for UI (LAN, Internet, BLE, Local)
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_all_neighbours_ui_command() -> Result<Vec<AllNeighbourInfo>, String> {
     Ok(get_all_neighbours_ui())
 }
 
 /// Get network statistics for UI
-#[tauri::command]
+#[tauri_crate::command]
 pub fn get_network_stats() -> Result<serde_json::Value, String> {
     // Get network statistics from libqaul
     let all_neighbours = get_all_neighbours_ui();

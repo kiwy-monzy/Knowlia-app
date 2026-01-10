@@ -213,7 +213,6 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       }
     }
     
-    console.log('No valid authentication tokens found');
     return false;
   };
 
@@ -247,10 +246,8 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       if (authWindow) {
         // Try to check if window is actually visible
         const isVisible = await authWindow.isVisible().catch(() => false);
-        console.log('Auth window exists and visible:', isVisible);
         return isVisible;
       }
-      console.log('Auth window does not exist');
       return false;
     } catch (error) {
       console.log('Error checking auth window:', error);
@@ -261,29 +258,29 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
   // Toggle auth webview window
   const toggleAuthWebview = async () => {
     try {
-      console.log('Toggling auth window...');
+      //console.log('Toggling auth window...');
       const windowExists = await checkAuthWindowExists();
-      console.log('Window exists before toggle:', windowExists);
+     // console.log('Window exists before toggle:', windowExists);
       
       if (windowExists) {
         // Window exists, close it
-        console.log('Closing auth window...');
+        //console.log('Closing auth window...');
         await invoke('close_auth_window');
         setIsAuthWindowOpen(false);
-        console.log('Auth window close command sent');
+        //console.log('Auth window close command sent');
       } else {
         // Window doesn't exist, create it
-        console.log('Creating auth window...');
+        //console.log('Creating auth window...');
         setIsAuthWindowOpen(true); // Set to true immediately for better UX
         await invoke('create_auth_window');
-        console.log('Auth window create command sent');
+        //console.log('Auth window create command sent');
         
         // Get session data after opening window
         setTimeout(async () => {
           const data = await getSessionDataFromAuthWindow();
           if (data) {
             setSessionData(data);
-            console.log('Session data updated after opening window');
+            //console.log('Session data updated after opening window');
           }
         }, 2000); // Wait for window to fully load
       }
@@ -292,12 +289,12 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       setTimeout(async () => {
         const actualState = await checkAuthWindowExists();
         setIsAuthWindowOpen(actualState);
-        console.log('Verified window state after toggle:', actualState);
+        //console.log('Verified window state after toggle:', actualState);
         
         // Recheck authentication status
         const authenticated = await checkOidcCookies();
         setIsAuthenticated(authenticated);
-        console.log('Auth window toggled, rechecked authentication status:', authenticated);
+        //console.log('Auth window toggled, rechecked authentication status:', authenticated);
       }, 1500); // Wait 1.5 seconds for window to be created/destroyed
     } catch (error) {
       console.error('Failed to toggle auth webview:', error);
@@ -309,7 +306,7 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
     const checkAuthAndWindow = async () => {
       const authenticated = await checkOidcCookies();
       setIsAuthenticated(authenticated);
-      console.log('Initial authentication status:', authenticated);
+      //console.log('Initial authentication status:', authenticated);
       
       // Get session data once if authenticated
       if (authenticated) {
@@ -320,7 +317,7 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       // Check window state
       const windowExists = await checkAuthWindowExists();
       setIsAuthWindowOpen(windowExists);
-      console.log('Initial auth window state:', windowExists);
+      //console.log('Initial auth window state:', windowExists);
       
       // Force button state update after a short delay
       setTimeout(() => {
@@ -336,7 +333,7 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
       const actualWindowState = await checkAuthWindowExists();
       setIsAuthWindowOpen(prevState => {
         if (prevState !== actualWindowState) {
-          console.log('Window state changed from', prevState, 'to', actualWindowState);
+          //console.log('Window state changed from', prevState, 'to', actualWindowState);
           // If window state changed, recheck authentication
           if (prevState !== actualWindowState) {
             checkOidcCookies().then(setIsAuthenticated);
@@ -355,50 +352,6 @@ export const HeaderComponent: React.FC<HeaderComponentProps> = ({
     let unlistenInternetNeighbours: (() => void) | null = null;
 
     const setupBackgroundListeners = async () => {
-      // Initial load
-      try {
-        const profileResult = await invoke<string>('user_profile');
-        
-        if (profileResult) {
-          let profile;
-          try {
-            profile = JSON.parse(profileResult);
-          } catch (parseError) {
-            profile = { name: 'User', profile: '', about: '', college: '' };
-          }
-          
-          setProfileData({
-            name: profile.name || 'User',
-            profile: profile.profile || '',
-            about: profile.about || '',
-            college: profile.college || ''
-          });
-          setShowProfile(true);
-        }
-      } catch (error) {
-        setProfileData({
-          name: 'User',
-          profile: '',
-          about: '',
-          college: ''
-        });
-        setShowProfile(true);
-      }
-
-      try {
-        const count = await invoke<number>('get_total_unread_count');
-        setTotalUnreadCount(count);
-      } catch (error) {
-        setTotalUnreadCount(0);
-      }
-
-      try {
-        const neighbours = await invoke<InternetNeighbourInfo[]>('get_internet_neighbours_ui_command');
-        setInternetNeighbours(neighbours);
-      } catch (error) {
-        console.error('Failed to fetch internet neighbours:', error);
-      }
-
       // Set up background listeners
       unlistenProfile = await listen<string>('user_profile_updated', (event) => {
         try {

@@ -28,7 +28,7 @@ pub struct FlightAirport {
     pub coordinates: Vec<f64>,
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_flights() -> Result<Vec<Flight>, String> {
     // Mock flight data for Tanzania
     let mut flights = Vec::new();

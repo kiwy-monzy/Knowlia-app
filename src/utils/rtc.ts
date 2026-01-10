@@ -49,7 +49,7 @@ export class RtcService {
   // Initialize RTC module and str0m manager
   async init(): Promise<void> {
     await invoke('rtc_init');
-    console.log('RTC module and str0m manager initialized');
+    //console.log('RTC module and str0m manager initialized');
   }
 
   // Start RTC session request with SDP offer generation

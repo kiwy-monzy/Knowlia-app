@@ -29,7 +29,7 @@ pub async fn scan_downloads_with_metadata() -> Result<Vec<super::GDriveItem>, St
 }
 
 /// Scan Downloads folder and create folder structure
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn scan_downloads_folder() -> Result<Vec<GDriveItem>, String> {
     let downloads_dir = get_downloads_dir().map_err(|e| e.to_string())?;
 

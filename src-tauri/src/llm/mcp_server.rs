@@ -548,7 +548,7 @@ impl ServerHandler for LoycaServer {
 }
 
 // Tauri commands for MCP server management
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn start_mcp_server(app_handle: AppHandle) -> Result<String, String> {
     let manager = app_handle.state::<Arc<McpServerManager>>();
 
@@ -561,7 +561,7 @@ pub async fn start_mcp_server(app_handle: AppHandle) -> Result<String, String> {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn stop_mcp_server(app_handle: AppHandle) -> Result<String, String> {
     let manager = app_handle.state::<Arc<McpServerManager>>();
 
@@ -571,7 +571,7 @@ pub async fn stop_mcp_server(app_handle: AppHandle) -> Result<String, String> {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_mcp_server_status(app_handle: AppHandle) -> Result<serde_json::Value, String> {
     let manager = app_handle.state::<Arc<McpServerManager>>();
     let is_running = manager.is_running().await;

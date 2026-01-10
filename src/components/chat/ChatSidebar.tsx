@@ -342,7 +342,7 @@ const ChatSidebar = () => {
 
       {/* Channels List */}
       <ScrollArea className="flex-1 px-1">
-        <div className="py-2 pb-6">
+        <div className="py-2 pb-8">
           {/* Direct Messages Section */}
           <div className="mb-4">
             <button

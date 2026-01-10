@@ -171,20 +171,20 @@ impl OcrManager {
 }
 
 // Tauri Commands
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn init_ocr_service(app_handle: AppHandle) -> Result<(), String> {
     let ocr_manager = app_handle.state::<OcrManager>();
     ocr_manager.initialize(&app_handle).await?;
     Ok(())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn ocr_service_info(app_handle: AppHandle) -> Result<OcrServiceInfo, String> {
     let ocr_manager = app_handle.state::<OcrManager>();
     Ok(ocr_manager.get_service_info().await)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn process_image_from_url(
     app_handle: AppHandle,
     image_url: String,
@@ -193,7 +193,7 @@ pub async fn process_image_from_url(
     ocr_manager.process_image_from_url(&image_url).await
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn take_screenshot_and_process(app_handle: AppHandle) -> Result<OcrResponse, String> {
     let ocr_manager = app_handle.state::<OcrManager>();
 

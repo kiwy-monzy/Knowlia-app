@@ -33,13 +33,13 @@ fn convert_mcp_tool(mcp_tool: &rmcp::model::Tool) -> Tool {
 }
 
 /// Get all chat sessions
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_sessions() -> Result<Vec<crate::sql::model::ChatSession>, String> {
     sql::queries::get_all_chat_sessions().map_err(|e| e.to_string())
 }
 
 /// Get all messages for a specific session
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_session_messages(session_id: String) -> Result<Vec<crate::sql::model::MessageData>, String> {
     println!("get_session_messages called with session_id: {}", session_id);
     let session_id = session_id.parse::<i64>().map_err(|e| {
@@ -59,7 +59,7 @@ pub async fn get_session_messages(session_id: String) -> Result<Vec<crate::sql::
 
 /// Call the model with tools.
 /// - If session_id is None, a new session will be created.
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn call_model(
     app_handle: AppHandle,
     prompt: String,
@@ -179,7 +179,7 @@ pub async fn call_model(
     Ok(actual_session_id)
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn stop_model() -> Result<(), String> {
     let mut global_token = CANCELLATION_TOKEN.lock().unwrap();
     if let Some(token) = global_token.take() {
@@ -190,7 +190,7 @@ pub async fn stop_model() -> Result<(), String> {
     }
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn validate_connection(use_vision: bool) -> Result<bool, String> {
     let global_config = sql::get_config()?;
     let llm_client = LLMClient::from_config(global_config, false, None, 0.0, use_vision);

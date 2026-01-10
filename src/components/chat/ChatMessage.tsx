@@ -180,17 +180,17 @@ const ChatMessage = ({ message, previousMessage }: ChatMessageProps) => {
   const StatusIcon = () => {
     switch (message.status) {
       case 'sending':
-        return <span className="text-[10px] text-white/70 font-mono tracking-tighter">..</span>;
+        return <span className="text-[10px] text-gray-400 font-mono tracking-tighter">..</span>;
       case 'sent':
-        return <Check className="h-5 w-5 text-white/70" />;
+        return <Check className="h-4 w-4 text-gray-400" />;
       case 'confirmed':
-        return <CheckCheck className="h-5 w-5 text-gray-400" />;
+        return <CheckCheck className="h-4 w-4 text-gray-400" />;
       case 'confirmed_by_all':
-        return <CheckCheck className="h-5 w-5 text-blue-400" />;
+        return <CheckCheck className="h-4 w-4 text-blue-400" />;
       case 'receiving':
-        return <span className="text-[10px] text-white/70 font-mono tracking-tighter">🚚</span>;
+        return <span className="text-[10px] text-gray-400 font-mono tracking-tighter">🚚</span>;
       case 'received':
-        return <span className="text-[10px] text-white/70 font-mono tracking-tighter">📨</span>;
+        return <span className="text-[10px] text-gray-400 font-mono tracking-tighter">📨</span>;
       default:
         return null;
     }
@@ -321,15 +321,15 @@ const ChatMessage = ({ message, previousMessage }: ChatMessageProps) => {
                 />
                 {/* File description below image */}
                 {message.fileInfo?.fileDescription && (
-                  <div className="mt-2 px-2">
-                    <p className="text-xs text-[#667781] text-left">
+                  <div className="mt-2 px-2 pb-1">
+                    <p className="text-xs text-[#667781] text-left leading-relaxed">
                       {message.fileInfo.fileDescription}
                     </p>
                   </div>
                 )}
                 {/* Time & Status below description */}
                 <div className={cn(
-                  'flex items-center gap-1 mt-1 px-2',
+                  'flex items-center gap-1 px-2 pb-2',
                   message.isOwn ? 'justify-end' : 'justify-start'
                 )}>
                   <span className="text-[11px] text-[#667781]">
@@ -384,15 +384,15 @@ const ChatMessage = ({ message, previousMessage }: ChatMessageProps) => {
                 />
                 {/* File description below audio */}
                 {message.fileInfo?.fileDescription && (
-                  <div className="mt-2 px-2">
-                    <p className="text-xs text-[#667781] text-left">
+                  <div className="mt-2 px-2 pb-1">
+                    <p className="text-xs text-[#667781] text-left leading-relaxed">
                       {message.fileInfo.fileDescription}
                     </p>
                   </div>
                 )}
                 {/* Time & Status below description */}
                 <div className={cn(
-                  'flex items-center gap-1 mt-1 px-2',
+                  'flex items-center gap-1 px-2 pb-2',
                   message.isOwn ? 'justify-end' : 'justify-start'
                 )}>
                   <span className="text-[11px] text-[#667781]">
@@ -421,15 +421,15 @@ const ChatMessage = ({ message, previousMessage }: ChatMessageProps) => {
                   />
                   {/* File description below video */}
                   {message.fileInfo?.fileDescription && (
-                    <div className="mt-2 px-2">
-                      <p className="text-xs text-[#667781] text-left">
+                    <div className="mt-2 px-2 pb-1">
+                      <p className="text-xs text-[#667781] text-left leading-relaxed">
                         {message.fileInfo.fileDescription}
                       </p>
                     </div>
                   )}
                   {/* Time & Status below description */}
                   <div className={cn(
-                    'flex items-center gap-1 mt-1 px-2',
+                    'flex items-center gap-1 px-2 pb-2',
                     message.isOwn ? 'justify-end' : 'justify-start'
                   )}>
                     <span className="text-[11px] text-[#667781]">
@@ -441,57 +441,72 @@ const ChatMessage = ({ message, previousMessage }: ChatMessageProps) => {
               </div>
             ) : (
               // Generic file display
-              <div 
-                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded"
-                onClick={async () => {
-                  try {
-                    if (message.fileInfo?.filePath) {
-                      await invoke('open_file', { filePath: message.fileInfo.filePath });
-                    } else {
-                      console.error('No file path available for opening');
-                    }
-                  } catch (error) {
-                    console.error('Failed to open file:', error);
-                    const filePath = message.fileInfo?.filePath || message.content || '';
-                    if (filePath.trim() && (filePath.includes('\\') || filePath.includes('/'))) {
-                      try {
-                        const dataUrl = await convertFileToDataUrl(filePath);
-                        if (dataUrl) {
-                          const newWindow = window.open(dataUrl, '_blank');
-                          if (newWindow) {
-                            newWindow.focus();
+              <div className="w-full">
+                <div 
+                  className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 -mx-2 px-2 py-1 rounded"
+                  onClick={async () => {
+                    try {
+                      if (message.fileInfo?.filePath) {
+                        await invoke('open_file', { filePath: message.fileInfo.filePath });
+                      } else {
+                        console.error('No file path available for opening');
+                      }
+                    } catch (error) {
+                      console.error('Failed to open file:', error);
+                      const filePath = message.fileInfo?.filePath || message.content || '';
+                      if (filePath.trim() && (filePath.includes('\\') || filePath.includes('/'))) {
+                        try {
+                          const dataUrl = await convertFileToDataUrl(filePath);
+                          if (dataUrl) {
+                            const newWindow = window.open(dataUrl, '_blank');
+                            if (newWindow) {
+                              newWindow.focus();
+                            }
                           }
+                        } catch (fallbackError) {
+                          console.error('Fallback also failed:', fallbackError);
                         }
-                      } catch (fallbackError) {
-                        console.error('Fallback also failed:', fallbackError);
                       }
                     }
-                  }
-                }}
-              >
-                <div className="flex-shrink-0">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <span className="text-blue-600 text-xs font-medium">FILE</span>
+                  }}
+                >
+                  <div className="flex-shrink-0">
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <span className="text-blue-600 text-xs font-medium">FILE</span>
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate">
+                      {message.fileInfo?.fileName || message.content?.split('\\').pop()?.split('/').pop() || 'File'}
+                    </p>
+                    <p className="text-xs text-[#667781]">
+                      {message.fileInfo ? formatFileSize(message.fileInfo.fileSize) : 'Click to open'}
+                    </p>
                   </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">
-                    {message.fileInfo?.fileName || message.content?.split('\\').pop()?.split('/').pop() || 'File'}
-                  </p>
-                  {message.fileInfo?.fileDescription && (
-                    <p className="text-xs text-[#667781] truncate">
+                {/* File description below document */}
+                {message.fileInfo?.fileDescription && (
+                  <div className="mt-2 px-2 pb-1">
+                    <p className="text-xs text-[#667781] text-left leading-relaxed">
                       {message.fileInfo.fileDescription}
                     </p>
-                  )}
-                  <p className="text-xs text-[#667781]">
-                    {message.fileInfo ? formatFileSize(message.fileInfo.fileSize) : 'Click to open'}
-                  </p>
+                  </div>
+                )}
+                {/* Time & Status below description */}
+                <div className={cn(
+                  'flex items-center gap-1 px-2 pb-2',
+                  message.isOwn ? 'justify-end' : 'justify-start'
+                )}>
+                  <span className="text-[11px] text-[#667781]">
+                    {formatTime(message.timestamp)}
+                  </span>
+                  {message.isOwn && <StatusIcon />}
                 </div>
               </div>
             )}
 
-            {/* Time & Status for non-images */}
-            {!isImage && (
+            {/* Time & Status for text messages only */}
+            {message.message_type !== 'file' && (
               <div className={cn(
                 'flex items-center gap-1 mt-2',
                 message.isOwn ? 'justify-end' : 'justify-start'

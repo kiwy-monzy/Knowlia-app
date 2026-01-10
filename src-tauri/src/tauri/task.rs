@@ -154,17 +154,17 @@ impl TaskStore {
 
 // Tauri Commands
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn create_task(state: State<'_, TaskStore>, task: Task) -> Result<Task, String> {
     state.create_task(task).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_task(state: State<'_, TaskStore>, id: String) -> Result<Option<Task>, String> {
     state.get_task(&id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn update_task(
     state: State<'_, TaskStore>,
     id: String,
@@ -173,17 +173,17 @@ pub async fn update_task(
     state.update_task(&id, updates).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn delete_task(state: State<'_, TaskStore>, id: String) -> Result<(), String> {
     state.delete_task(&id).map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_all_tasks(state: State<'_, TaskStore>) -> Result<Vec<Task>, String> {
     state.get_all_tasks().map_err(|e| e.to_string())
 }
 
-#[tauri::command]
+#[tauri_crate::command]
 pub async fn get_tasks_by_status(
     state: State<'_, TaskStore>,
     status: String,

@@ -50,8 +50,34 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse }) => {
 
   const playClickSound = () => {
     if (audioRef.current) {
-      audioRef.current.currentTime = 0; // Rewind to the start
-      audioRef.current.play().catch(e => console.error('Error playing sound:', e));
+      // Reset audio to start if it was playing
+      audioRef.current.currentTime = 0;
+      
+      // Use a more robust play method with better error handling
+      const playPromise = audioRef.current.play();
+      
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Audio played successfully
+          })
+          .catch(error => {
+            // Handle specific audio errors gracefully
+            if (error.name === 'NotAllowedError') {
+              console.log('Audio playback was blocked by user interaction policy');
+            } else if (error.name === 'NotSupportedError') {
+              console.log('Audio format not supported, trying to reload audio');
+              // Try to recreate the audio element
+              if (audioRef.current) {
+                audioRef.current.src = '';
+                audioRef.current.src = clickSound;
+                audioRef.current.load();
+              }
+            } else {
+              console.error('Error playing sound:', error);
+            }
+          });
+      }
     }
   };
 
@@ -124,10 +150,10 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggleCollapse }) => {
     { id: 'group', name: 'Chats', icon: Users, route: '/groups' },
     { id: 'map', name: 'Map', icon: MapPin, route: '/map' },
     { id: 'storage', name: 'Notes', icon: Database, route: '/storage' },
-    //{ id: 'timetable', name: 'Timetable', icon: Calendar, route: '/timetable' },
-    //{ id: 'tasks', name: 'Tasks', icon: CheckSquare, route: '/tasks' },
-    //{ id: 'ai', name: 'AI', icon: Bot, route: '/ai' },
-    //{ id: 'gpt', name: 'GPT', icon: Brain, route: '/gpt' },
+    { id: 'timetable', name: 'Timetable', icon: Calendar, route: '/timetable' },
+    { id: 'tasks', name: 'Tasks', icon: CheckSquare, route: '/tasks' },
+    { id: 'ai', name: 'AI', icon: Bot, route: '/ai' },
+    { id: 'gpt', name: 'GPT', icon: Brain, route: '/gpt' },
     { id: 'settings', name: 'Settings', icon: Settings, route: '/settings' },
   ];
 

@@ -4,6 +4,7 @@ import ChatHeader from './ChatHeader';
 import ChatMessage from './ChatMessage';
 import MessageInput from './MessageInput';
 import InfoSidebar from './InfoSidebar';
+import NoContent from '@/components/NoContent';
 import { MessageCircle } from 'lucide-react';
 
 const ChatArea = () => {
@@ -158,19 +159,16 @@ const ChatArea = () => {
               </div>
             ))}
 
-            {/* Discord-style empty state */}
+            {/* Nice empty state using NoContent component */}
             {filteredMessages.length === 0 && !searchTerm && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <MessageCircle className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2 text-foreground">
-                  This is the beginning of your conversation
-                </h3>
-                <p className="text-sm text-muted-foreground max-w-md">
+              <NoContent 
+                title="Start the Conversation"
+                className="py-16"
+              >
+                <p className="text-center">
                   Say hello to {currentChannel?.name || 'this channel'}! Your first message will appear here.
                 </p>
-              </div>
+              </NoContent>
             )}
 
             {filteredMessages.length === 0 && searchTerm && (
